@@ -1,0 +1,23 @@
+I built an AI tool that writes cold emails that actually get replies. Here's what happened...
+
+Hey sales professionals,
+
+I've been in sales for 5 years, and one thing I always hated was writing cold emails. It's time-consuming, stressful, and let's be honest—most of them get deleted.
+
+So I built MailForge, an AI-powered tool that generates personalized B2B cold emails in 10 seconds.
+
+What makes it different:
+- Smart personalization based on prospect info
+- 3 different tones (professional, friendly, casual)
+- Multi-language support (English, Spanish, French, German, Japanese, Chinese)
+- Proven templates with high reply rates
+
+I tested it with my team and our reply rates went from 3% to 18% in the first month.
+
+Free plan available (20 emails/month) so you can try it risk-free.
+
+Check it out: https://getmailforge.top
+
+Would love to hear what you think! Have you tried any AI email tools?
+
+#sales #coldemail #AI #SaaS #productivity

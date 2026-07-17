@@ -1,0 +1,9 @@
+﻿git : Pushing to https://github.com/Insane-rebirth/MailForge.git
+At line:15 char:5937
++ ... les\@vscode\ripgrep\bin'; git push origin main --verbose 2>&1 | Out-F ...
++                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Pushing to http...h/MailForge.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+fatal: unable to access 'https://github.com/Insane-rebirth/MailForge.git/': Failed to connect to github.com port 443 af
+ter 21107 ms: Could not connect to server

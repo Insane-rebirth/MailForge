@@ -22,6 +22,8 @@ const publicPaths = [
   '/privacy',
   '/terms',
   '/auth/callback',
+  '/admin',
+  '/admin/login',
 ]
 
 export async function middleware(request: NextRequest) {
