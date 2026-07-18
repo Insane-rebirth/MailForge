@@ -17,16 +17,16 @@ export async function POST(request: NextRequest) {
     const eventType = payload.type
     const data = payload.data
 
-    if (eventType === 'checkout.completed') {
-      const amount = data.amount?.amount || data.total_amount || '0'
-      const plan = data.product?.name || data.metadata?.plan || 'Unknown'
+    const handlePaymentEvent = async () => {
+      const amount = data.amount?.amount || data.total_amount || data.amount || '0'
+      const plan = data.product?.name || data.metadata?.plan || data.description || 'Unknown'
       const customerEmail = data.customer?.email || data.email || 'N/A'
       const timestamp = new Date().toLocaleString('zh-CN', {
         timeZone: 'Asia/Shanghai',
       })
 
       const success = await sendPaymentNotification(
-        amount,
+        typeof amount === 'number' ? (amount / 100).toString() : amount.toString(),
         plan,
         customerEmail,
         timestamp
@@ -35,7 +35,30 @@ export async function POST(request: NextRequest) {
       console.log('Payment notification sent:', success)
     }
 
-    return NextResponse.json({ received: true })
+    switch (eventType) {
+      case 'checkout.completed':
+        await handlePaymentEvent()
+        break
+      case 'payment.created':
+        await handlePaymentEvent()
+        break
+      case 'payment.completed':
+        await handlePaymentEvent()
+        break
+      case 'subscription.active':
+        console.log('Subscription activated:', data)
+        break
+      case 'subscription.created':
+        console.log('Subscription created:', data)
+        break
+      case 'refund.created':
+        console.log('Refund created:', data)
+        break
+      default:
+        console.log('Unhandled event type:', eventType)
+    }
+
+    return NextResponse.json({ received: true, event_type: eventType })
   } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
