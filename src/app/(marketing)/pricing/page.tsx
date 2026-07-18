@@ -106,10 +106,6 @@ export default function PricingPage() {
   }, [])
 
   const handlePlanSelect = (planName: string) => {
-    if (!isLoggedIn) {
-      router.push('/signup')
-      return
-    }
     router.push(`/checkout?plan=${planName.toLowerCase()}`)
   }
 
