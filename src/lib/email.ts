@@ -10,7 +10,7 @@ export async function sendPaymentNotification(
     const payload = {
       personalizations: [
         {
-          to: [{ email: '2964572587@qq.com' }],
+          to: [{ email: '1573089608@qq.com' }],
         },
       ],
       from: {
@@ -84,7 +84,7 @@ export async function sendTestEmail(): Promise<boolean> {
     const payload = {
       personalizations: [
         {
-          to: [{ email: '2964572587@qq.com' }],
+          to: [{ email: '1573089608@qq.com' }],
         },
       ],
       from: {
