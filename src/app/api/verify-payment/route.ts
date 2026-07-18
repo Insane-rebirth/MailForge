@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userEmail = email || paymentResult.customer_email || 'N/A'
+    const userEmail = email || 'N/A'
     const amount = (paymentResult.amount || (plan === 'pro' ? 2900 : 7900)) / 100
 
     if (supabase) {
