@@ -137,11 +137,12 @@ function SuccessContent() {
       setMessage('Verifying your payment...')
 
       const pendingPlan = sessionStorage.getItem('pending_upgrade_plan')
+      const pendingEmail = sessionStorage.getItem('pending_upgrade_email')
 
       const response = await fetch('/api/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_id: paymentId, plan: pendingPlan }),
+        body: JSON.stringify({ payment_id: paymentId, plan: pendingPlan, email: pendingEmail }),
       })
 
       const data = await response.json()
