@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
     checkUser()
 
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setUser(session?.user || null)
       if (!session?.user) {
         window.location.href = '/login'

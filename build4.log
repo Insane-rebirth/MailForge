@@ -1,0 +1,30 @@
+﻿
+> mailforge@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "E:\/node.exe" "E:\/node_modules/npm/bin/npm-cli.js" run build
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/lib/supabase/client.ts:32:7
+Type error: 'target' is declared but its value is never read.
+
+[0m [90m 30 |[39m[0m
+[0m [90m 31 |[39m [36mexport[39m [36mconst[39m supabase [33m=[39m [36mnew[39m [33mProxy[39m({} [36mas[39
+m any[33m,[39m {[0m
+[0m[31m[1m>[22m[39m[90m 32 |[39m   [36mget[39m(target[33m,[39m prop) {[0m
+[0m [90m    |[39m       [31m[1m^[22m[39m[0m
+[0m [90m 33 |[39m     [36mconst[39m client [33m=[39m getSupabase()[0m
+[0m [90m 34 |[39m     [36mif[39m ([33m![39mclient) {[0m
+[0m [90m 35 |[39m       [36mreturn[39m () [33m=>[39m [33mPromise[39m[33m.[39mresolve({ data[33m:[39m { use
+r[33m:[39m [36mnull[39m } })[0m

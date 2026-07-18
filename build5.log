@@ -1,0 +1,94 @@
+﻿
+> mailforge@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./src/app/(app)/dashboard/page.tsx
+67:6  Warning: React Hook useEffect has missing dependencies: 'fetchActivity' and 'loadData'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/(app)/dashboard/settings/page.tsx
+60:6  Warning: React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/(marketing)/success/page.tsx
+51:6  Warning: React Hook useEffect has missing dependencies: 'verifyCheckout', 'verifyCreemCheckout', 'verifyPayment', and 'verifyStripeSession'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/generator/page.tsx
+153:6  Warning: React Hook useEffect has a missing dependency: 'loadSubscriptionData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/25) ...
+   Generating static pages (6/25) 
+   Generating static pages (12/25) 
+   Generating static pages (18/25) 
+ ✓ Generating static pages (25/25)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    4.52 kB         162 kB
+├ ○ /_not-found                          871 B            88 kB
+├ ○ /about                               2.6 kB         96.5 kB
+├ ○ /admin                               1.95 kB        95.9 kB
+├ ○ /admin/login                         1.97 kB        89.1 kB
+├ ○ /analytics                           1.69 kB        88.8 kB
+├ ƒ /api/ab-test                         0 B                0 B
+├ ƒ /api/account                         0 B                0 B
+├ ƒ /api/admin/login                     0 B                0 B
+├ ƒ /api/admin/statistics                0 B                0 B
+├ ƒ /api/admin/users                     0 B                0 B
+├ ƒ /api/check-subscription              0 B                0 B
+├ ƒ /api/create-checkout-session         0 B                0 B
+├ ƒ /api/create-payment-link             0 B                0 B
+├ ƒ /api/create-portal-session           0 B                0 B
+├ ƒ /api/crm                             0 B                0 B
+├ ƒ /api/email-count                     0 B                0 B
+├ ƒ /api/email-history                   0 B                0 B
+├ ƒ /api/email-history/[id]              0 B                0 B
+├ ƒ /api/generate-email                  0 B                0 B
+├ ƒ /api/generate-emails                 0 B                0 B
+├ ƒ /api/notify                          0 B                0 B
+├ ƒ /api/profile                         0 B                0 B
+├ ƒ /api/score-email                     0 B                0 B
+├ ƒ /api/signup                          0 B                0 B
+├ ƒ /api/sync-usage                      0 B                0 B
+├ ƒ /api/update-subscription             0 B                0 B
+├ ƒ /api/user                            0 B                0 B
+├ ƒ /api/user-usage                      0 B                0 B
+├ ƒ /api/validate-email                  0 B                0 B
+├ ƒ /api/verify-checkout                 0 B                0 B
+├ ƒ /api/verify-payment                  0 B                0 B
+├ ƒ /api/webhook/creem                   0 B                0 B
+├ ƒ /api/webhook/stripe                  0 B                0 B
+├ ƒ /auth/callback                       0 B                0 B
+├ ○ /checkout                            4.17 kB         155 kB
+├ ○ /contact                             2.3 kB         96.2 kB
+├ ○ /dashboard                           5.65 kB         163 kB
+├ ○ /dashboard/ab-testing                5.06 kB         163 kB
+├ ○ /dashboard/settings                  4.37 kB         167 kB
+├ ○ /dashboard/subscription              3.31 kB         166 kB
+├ ○ /features                            1.75 kB        95.7 kB
+├ ○ /generator                           10.6 kB         161 kB
+├ ○ /login                               2.27 kB         160 kB
+├ ○ /pricing                             3.46 kB         161 kB
+├ ○ /privacy                             1.53 kB        95.5 kB
+├ ○ /signup                              2.23 kB         160 kB
+├ ○ /success                             3.03 kB         154 kB
+└ ○ /terms                               2.04 kB          96 kB
++ First Load JS shared by all            87.1 kB
+  ├ chunks/23-9a9d3d34fd9bcb9f.js        31.5 kB
+  ├ chunks/fd9d1056-79c5ad9da5262500.js  53.6 kB
+  └ other shared chunks (total)          1.95 kB
+
+
+ƒ Middleware                             82 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

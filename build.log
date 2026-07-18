@@ -1,0 +1,30 @@
+﻿
+> mailforge@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "E:\/node.exe" "E:\/node_modules/npm/bin/npm-cli.js" run build
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/(app)/dashboard/page.tsx:51:91
+Type error: Parameter '_event' implicitly has an 'any' type.
+
+[0m [90m 49 |[39m     checkUser()[0m
+[0m [90m 50 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 51 |[39m     [36mconst[39m { data[33m:[39m { subscription[33m:[39m authSubscriptio
+n } } [33m=[39m supabase[33m.[39mauth[33m.[39monAuthStateChange((_event[33m,[39m session) [33m=>[39m {[0m
+[0m [90m    |[39m                                                                                           [31m[1
+m^[22m[39m[0m
+[0m [90m 52 |[39m       setUser(session[33m?[39m[33m.[39muser [33m||[39m [36mnull[39m)[0m
+[0m [90m 53 |[39m       [36mif[39m ([33m![39msession[33m?[39m[33m.[39muser) {[0m
+[0m [90m 54 |[39m         window[33m.[39mlocation[33m.[39mhref [33m=[39m [32m'/login'[39m[0m

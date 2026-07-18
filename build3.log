@@ -1,0 +1,28 @@
+﻿
+> mailforge@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "E:\/node.exe" "E:\/node_modules/npm/bin/npm-cli.js" run build
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/lib/supabase/client.ts:1:36
+Type error: Module '"@supabase/ssr"' has no exported member 'SupabaseClient'.
+
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { createBrowserClient[33m,[39m type [33mSupabaseClient[39m 
+} [36mfrom[39m [32m'@supabase/ssr'[39m[0m
+[0m [90m   |[39m                                    [31m[1m^[22m[39m[0m
+[0m [90m 2 |[39m[0m
+[0m [90m 3 |[39m [36mlet[39m _supabase[33m:[39m [33mSupabaseClient[39m [33m|[39m [36mnull[39m [33m=[39m 
+[36mnull[39m[0m
+[0m [90m 4 |[39m[0m

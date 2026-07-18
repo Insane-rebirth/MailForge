@@ -1,4 +1,5 @@
-import { createBrowserClient, type SupabaseClient } from '@supabase/ssr'
+import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 let _supabase: SupabaseClient | null = null
 
@@ -28,7 +29,7 @@ export const getSupabase = (): SupabaseClient | null => {
 }
 
 export const supabase = new Proxy({} as any, {
-  get(target, prop) {
+  get(_target: any, prop: any) {
     const client = getSupabase()
     if (!client) {
       return () => Promise.resolve({ data: { user: null } })
