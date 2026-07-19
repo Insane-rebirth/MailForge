@@ -1,9 +1,5 @@
-'use client'
-
 import { ArrowRight, Play, Check } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 const features = [
   {
@@ -116,16 +112,6 @@ const pricingPlans = [
 ]
 
 export default function LandingPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setIsLoggedIn(!!user)
-    }
-    checkUser()
-  }, [])
-
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -153,7 +139,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <Link
-                href={isLoggedIn ? '/generator' : '/signup'}
+                href="/signup"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all duration-300"
               >
                 Start Free — No Credit Card
@@ -411,7 +397,7 @@ export default function LandingPage() {
             Join sales professionals who have transformed their outreach with MailForge.
           </p>
           <Link
-            href={isLoggedIn ? '/generator' : '/signup'}
+            href="/signup"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all duration-300"
           >
             Start Free — No Credit Card
