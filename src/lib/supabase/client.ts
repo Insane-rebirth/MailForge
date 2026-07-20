@@ -33,7 +33,6 @@ function createSafeProxy(target: any, path: string[] = []): any {
     get(_target: any, prop: string) {
       const client = getSupabase()
       if (!client) {
-        const fullPath = [...path, prop].join('.')
         if (['getUser', 'signInWithPassword', 'signUp', 'signOut', 'onAuthStateChange'].includes(prop)) {
           if (prop === 'onAuthStateChange') {
             return () => ({ unsubscribe: () => {} })
