@@ -28,26 +28,34 @@ export const getSupabase = (): SupabaseClient | null => {
   return _supabase
 }
 
-function createSafeProxy(target: any, path: string[] = []): any {
-  return new Proxy(target, {
+function createSafeProxy(path: string[] = []): any {
+  return new Proxy({} as any, {
     get(_target: any, prop: string) {
       const client = getSupabase()
       if (!client) {
-        if (['getUser', 'signInWithPassword', 'signUp', 'signOut', 'onAuthStateChange'].includes(prop)) {
+        if (['getUser', 'signInWithPassword', 'signUp', 'signOut', 'onAuthStateChange', 'signInWithOAuth'].includes(prop)) {
           if (prop === 'onAuthStateChange') {
             return () => ({ unsubscribe: () => {} })
           }
           return () => Promise.resolve({ data: { user: null, session: null }, error: null })
         }
-        return createSafeProxy({}, [...path, prop])
+        return createSafeProxy([...path, prop])
       }
       
-      const value = (client as any)[prop]
+      let current: any = client
+      for (const p of path) {
+        current = current[p]
+        if (!current) {
+          return createSafeProxy([...path, prop])
+        }
+      }
+      
+      const value = current[prop]
       if (typeof value === 'function') {
-        return value.bind(client)
+        return value.bind(current)
       }
       if (typeof value === 'object' && value !== null) {
-        return createSafeProxy(value, [...path, prop])
+        return createSafeProxy([...path, prop])
       }
       return value
     },
@@ -57,4 +65,4 @@ function createSafeProxy(target: any, path: string[] = []): any {
   })
 }
 
-export const supabase = createSafeProxy({})
+export const supabase = createSafeProxy()
