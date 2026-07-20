@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sparkles, Mail, TrendingUp, Calendar, LogOut, Plus, ArrowUp, XCircle, AlertTriangle, Clock, BarChart3, Target } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 import {
   verifySubscriptionWithAPI,
   PLAN_QUOTAS,
@@ -36,26 +36,40 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        if (!authUser) {
+          window.location.href = '/login'
+          return
+        }
+        setUser(authUser)
+        setLoading(false)
+
+        const { data: authSubscription } = client.auth.onAuthStateChange((_event: any, session: any) => {
+          setUser(session?.user || null)
+          if (!session?.user) {
+            window.location.href = '/login'
+          }
+        })
+
+        unsubscribe = () => authSubscription?.subscription?.unsubscribe()
+      } catch (error) {
+        console.error('Failed to check user:', error)
         window.location.href = '/login'
-        return
       }
-      setUser(authUser)
-      setLoading(false)
     }
 
     checkUser()
 
-    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setUser(session?.user || null)
-      if (!session?.user) {
-        window.location.href = '/login'
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
       }
-    })
-
-    return () => authSubscription?.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -120,7 +134,12 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    try {
+      const client = getSupabase()
+      await client.auth.signOut()
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+    }
     window.location.href = '/login'
   }
 

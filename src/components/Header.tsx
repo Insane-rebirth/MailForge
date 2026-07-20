@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Menu, X, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -20,22 +20,40 @@ export default function Header() {
   }, [])
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      setUser(authUser)
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        setUser(authUser)
+
+        const { data: subscription } = client.auth.onAuthStateChange((_event: any, session: any) => {
+          setUser(session?.user || null)
+        })
+
+        unsubscribe = () => subscription?.subscription?.unsubscribe()
+      } catch (error) {
+        console.error('Failed to check user:', error)
+      }
     }
 
     checkUser()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setUser(session?.user || null)
-    })
-
-    return () => subscription?.unsubscribe()
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
   }, [])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const client = getSupabase()
+      await client.auth.signOut()
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+    }
     setMobileMenuOpen(false)
     window.location.href = '/login'
   }

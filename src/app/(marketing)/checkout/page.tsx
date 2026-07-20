@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Shield, CreditCard, Lock, ArrowLeft, CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react'
 
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 const PLAN_DETAILS = {
   free: { name: 'Free', price: 0, emails: '20 emails/month', features: ['20 emails/month', 'Basic templates', 'Email support'] },
@@ -33,10 +33,15 @@ function CheckoutContent() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser?.email) {
-        setEmail(authUser.email)
-        setIsEmailPreFilled(true)
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        if (authUser?.email) {
+          setEmail(authUser.email)
+          setIsEmailPreFilled(true)
+        }
+      } catch (error) {
+        console.error('Failed to check user:', error)
       }
     }
     checkUser()

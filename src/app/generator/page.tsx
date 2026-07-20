@@ -10,7 +10,7 @@ import {
   PLAN_QUOTAS,
   PLAN_NAMES
 } from '@/lib/subscription'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 interface EmailData {
   style: 'Formal' | 'Casual' | 'Concise' | 'Professional' | 'Friendly'
@@ -154,7 +154,7 @@ export default function GeneratorPage() {
 
   const loadSubscriptionData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await getSupabase().auth.getUser()
 
       if (user) {
         const verified = await verifySubscriptionWithAPI(user.id)
@@ -212,7 +212,8 @@ export default function GeneratorPage() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const client = getSupabase()
+    const { data: { user } } = await client.auth.getUser()
     const userId = user?.id || ''
 
     const result = await checkCanGenerate(userId)
@@ -377,7 +378,8 @@ export default function GeneratorPage() {
   const handleBatchGenerate = async () => {
     if (!batchFile) return
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const client = getSupabase()
+    const { data: { user } } = await client.auth.getUser()
     const userId = user?.id || ''
 
     const result = await checkCanGenerate(userId)

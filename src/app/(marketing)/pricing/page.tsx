@@ -4,7 +4,7 @@ import { Check, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 const plans = [
   {
@@ -114,8 +114,14 @@ export default function PricingPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setIsLoggedIn(!!user)
+      try {
+        const client = getSupabase()
+        const { data: { user } } = await client.auth.getUser()
+        setIsLoggedIn(!!user)
+      } catch (error) {
+        console.error('Failed to check user:', error)
+        setIsLoggedIn(false)
+      }
     }
     checkUser()
   }, [])

@@ -5,7 +5,7 @@ import { ArrowLeft, CreditCard, Zap, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Profile } from '@/types'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 const planLimits: Record<string, number> = {
   free: 20,
@@ -43,12 +43,18 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        if (!authUser) {
+          window.location.href = '/login'
+          return
+        }
+        setUser(authUser)
+      } catch (error) {
+        console.error('Failed to check user:', error)
         window.location.href = '/login'
-        return
       }
-      setUser(authUser)
     }
     checkUser()
   }, [])

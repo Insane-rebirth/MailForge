@@ -1,22 +1,31 @@
 'use client'
 
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleGoogleSignup = async () => {
     setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/dashboard',
-      },
-    })
-    setLoading(false)
+    setError('')
+    try {
+      const client = getSupabase()
+      await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        },
+      })
+    } catch (err) {
+      setError('Failed to connect to authentication service. Please try again.')
+      console.error('Google signup error:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -38,6 +47,13 @@ export default function SignupPage() {
             <h1 className="text-2xl font-bold text-white mb-2">Create Your Account</h1>
             <p className="text-white/60">Start generating professional emails</p>
           </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-red-400 mb-4 px-4 py-3 bg-red-500/10 rounded-xl">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <button
             onClick={handleGoogleSignup}

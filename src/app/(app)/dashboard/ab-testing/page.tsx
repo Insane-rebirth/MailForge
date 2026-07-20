@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Trash2, Check, BarChart3, Users, MailOpen, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 interface TestVariant {
   id: string
@@ -42,13 +42,19 @@ export default function ABTestingPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        if (!authUser) {
+          window.location.href = '/login'
+          return
+        }
+        setUser(authUser)
+        setLoading(false)
+      } catch (error) {
+        console.error('Failed to check user:', error)
         window.location.href = '/login'
-        return
       }
-      setUser(authUser)
-      setLoading(false)
     }
     checkUser()
   }, [])

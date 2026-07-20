@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, AlertTriangle, Check, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
@@ -41,12 +41,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        if (!authUser) {
+          window.location.href = '/login'
+          return
+        }
+        setUser(authUser)
+      } catch (error) {
+        console.error('Failed to check user:', error)
         window.location.href = '/login'
-        return
       }
-      setUser(authUser)
     }
     checkUser()
   }, [])
@@ -161,7 +167,8 @@ export default function SettingsPage() {
     }
 
     try {
-      const { error } = await supabase
+      const client = getSupabase()
+      const { error } = await client
         .from('profiles')
         .update({ full_name: fullName.trim() })
         .eq('id', user?.id)
@@ -203,7 +210,8 @@ export default function SettingsPage() {
     if (!validatePassword()) return
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      const client = getSupabase()
+      const { error } = await client.auth.updateUser({
         password: newPassword
       })
 
@@ -240,7 +248,8 @@ export default function SettingsPage() {
       })
 
       if (response.ok) {
-        await supabase.auth.signOut()
+        const client = getSupabase()
+        await client.auth.signOut()
         window.location.href = '/'
       } else {
         const data = await response.json()

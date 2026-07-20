@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Sparkles, AlertTriangle } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabase } from '@/lib/supabase/client'
 
 function SuccessContent() {
   const router = useRouter()
@@ -16,8 +16,14 @@ function SuccessContent() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      setUser(authUser)
+      try {
+        const client = getSupabase()
+        const { data: { user: authUser } } = await client.auth.getUser()
+        setUser(authUser)
+      } catch (error) {
+        console.error('Failed to check user:', error)
+        setUser(null)
+      }
     }
     checkUser()
   }, [])
