@@ -53,7 +53,6 @@ export default function Header() {
           <Link
             href="/"
             className="flex items-center gap-3 group"
-            onClick={() => setMobileMenuOpen(false)}
           >
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-purple-500/50 transition-shadow duration-300">
               <Sparkles className="w-5 h-5 text-white" />
@@ -134,37 +133,41 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/10">
           <div className="px-4 py-6 space-y-4">
-            <Link
-              href="/features"
-              className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              href="/pricing"
-              className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/generator"
-              className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Generator
-            </Link>
+            <div onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="/features"
+                className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
+              >
+                Features
+              </Link>
+            </div>
+            <div onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="/pricing"
+                className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
+              >
+                Pricing
+              </Link>
+            </div>
+            <div onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="/generator"
+                className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
+              >
+                Generator
+              </Link>
+            </div>
             <hr className="border-white/10" />
             {user ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
+                <div onClick={() => setMobileMenuOpen(false)}>
+                  <Link
+                    href="/dashboard"
+                    className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
+                  >
+                    Dashboard
+                  </Link>
+                </div>
                 <button
                   onClick={handleSignOut}
                   className="w-full py-3 px-4 text-left text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200"
@@ -174,20 +177,22 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200 text-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="block py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-lg text-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
+                <div onClick={() => setMobileMenuOpen(false)}>
+                  <Link
+                    href="/login"
+                    className="block py-3 px-4 text-white/70 hover:text-white hover:bg-white/10 font-medium rounded-lg transition-all duration-200 text-center"
+                  >
+                    Sign In
+                  </Link>
+                </div>
+                <div onClick={() => setMobileMenuOpen(false)}>
+                  <Link
+                    href="/signup"
+                    className="block py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-lg text-center"
+                  >
+                    Get Started
+                  </Link>
+                </div>
               </>
             )}
           </div>

@@ -1,10 +1,12 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
-import { Toaster } from 'react-hot-toast'
-import Header from '@/components/Header'
+import dynamic from 'next/dynamic'
 import Footer from '@/components/Footer'
-import CookieBanner from '@/components/CookieBanner'
+
+const Header = dynamic(() => import('@/components/Header'), { ssr: false })
+const CookieBanner = dynamic(() => import('@/components/CookieBanner'), { ssr: false })
+const Toaster = dynamic(() => import('react-hot-toast').then((mod) => ({ default: mod.Toaster })), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 

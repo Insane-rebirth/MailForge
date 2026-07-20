@@ -51,7 +51,7 @@ function createSafeProxy(target: any, path: string[] = []): any {
       }
       return value
     },
-    apply(_target: any, _thisArg: any, args: any[]) {
+    apply(_target: any, _thisArg: any, _args: any[]) {
       return Promise.resolve({ data: { user: null }, error: null })
     },
   })

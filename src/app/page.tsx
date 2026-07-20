@@ -1,3 +1,5 @@
+'use client'
+
 import { ArrowRight, Play, Check } from 'lucide-react'
 import Link from 'next/link'
 
