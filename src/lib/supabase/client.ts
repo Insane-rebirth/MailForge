@@ -28,12 +28,34 @@ export const getSupabase = (): SupabaseClient | null => {
   return _supabase
 }
 
-export const supabase = new Proxy({} as any, {
-  get(_target: any, prop: any) {
-    const client = getSupabase()
-    if (!client) {
-      return () => Promise.resolve({ data: { user: null } })
-    }
-    return (client as any)[prop]
-  },
-})
+function createSafeProxy(target: any, path: string[] = []): any {
+  return new Proxy(target, {
+    get(_target: any, prop: string) {
+      const client = getSupabase()
+      if (!client) {
+        const fullPath = [...path, prop].join('.')
+        if (['getUser', 'signInWithPassword', 'signUp', 'signOut', 'onAuthStateChange'].includes(prop)) {
+          if (prop === 'onAuthStateChange') {
+            return () => ({ unsubscribe: () => {} })
+          }
+          return () => Promise.resolve({ data: { user: null, session: null }, error: null })
+        }
+        return createSafeProxy({}, [...path, prop])
+      }
+      
+      const value = (client as any)[prop]
+      if (typeof value === 'function') {
+        return value.bind(client)
+      }
+      if (typeof value === 'object' && value !== null) {
+        return createSafeProxy(value, [...path, prop])
+      }
+      return value
+    },
+    apply(_target: any, _thisArg: any, args: any[]) {
+      return Promise.resolve({ data: { user: null }, error: null })
+    },
+  })
+}
+
+export const supabase = createSafeProxy({})
