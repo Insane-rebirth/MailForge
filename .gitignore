@@ -9,6 +9,9 @@ out
 # Environment variables
 .env.local
 .env
+.env.production
+.env.development
+.env.*.local
 
 # Debug
 npm-debug.log*

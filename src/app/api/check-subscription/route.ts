@@ -8,13 +8,13 @@ const CREEM_API_BASE = 'https://api.creem.io/v1'
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   if (!supabase) {
-    return NextResponse.json({ plan: 'free' })
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
   }
 
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    return NextResponse.json({ plan: 'free' })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {

@@ -223,6 +223,12 @@ Return ONLY valid JSON with this exact structure:
         )
       }
 
+      try {
+        await supabase.rpc('increment_email_count', { p_user_id: user.id })
+      } catch {
+        // ignore
+      }
+
       return NextResponse.json({
         ...result,
         mode: 'ai'
@@ -299,6 +305,12 @@ Return ONLY a JSON array with 3 objects, each having: subject, body, style (Form
           { error: 'Invalid JSON response from DeepSeek API' },
           { status: 500 }
         )
+      }
+
+      try {
+        await supabase.rpc('increment_email_count', { p_user_id: user.id })
+      } catch {
+        // ignore
       }
 
       return NextResponse.json({
