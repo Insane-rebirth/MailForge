@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { SupabaseClient, createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 async function getAdminClient(): Promise<SupabaseClient | null> {
@@ -22,14 +21,25 @@ async function getAdminClient(): Promise<SupabaseClient | null> {
 
 export async function GET() {
   try {
+    const envDebug = {
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length,
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseUrlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    }
+    
+    console.log('Environment debug:', JSON.stringify(envDebug))
+    
     const adminClient = await getAdminClient()
     
     if (!adminClient) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'SUPABASE_SERVICE_ROLE_KEY not configured in Vercel',
-          message: '请在Vercel的环境变量中添加SUPABASE_SERVICE_ROLE_KEY'
+          error: 'Missing environment variables',
+          debug: envDebug,
+          message: 'SUPABASE_SERVICE_ROLE_KEY或NEXT_PUBLIC_SUPABASE_URL未配置'
         },
         { status: 500 }
       )
