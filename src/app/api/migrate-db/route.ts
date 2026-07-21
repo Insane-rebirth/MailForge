@@ -1,38 +1,54 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { SupabaseClient, createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+async function getAdminClient(): Promise<SupabaseClient | null> {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
   if (!serviceRoleKey || !supabaseUrl) {
-    return NextResponse.json(
-      { success: false, error: 'Missing environment variables' },
-      { status: 500 }
-    );
+    return null
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
-  });
+  })
+}
 
+export async function GET() {
   try {
-    console.log('=== 开始数据库迁移 ===');
-
-    console.log('1. 检查现有表结构...');
-    const { data: existingTables, error: tablesError } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public');
-
-    if (tablesError) {
-      throw new Error(`查询表结构失败: ${tablesError.message}`);
+    const adminClient = await getAdminClient()
+    
+    if (!adminClient) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'SUPABASE_SERVICE_ROLE_KEY not configured in Vercel',
+          message: '请在Vercel的环境变量中添加SUPABASE_SERVICE_ROLE_KEY'
+        },
+        { status: 500 }
+      )
     }
 
-    console.log('现有表:', JSON.stringify(existingTables));
+    console.log('=== 开始数据库迁移 ===')
+
+    console.log('1. 检查现有表结构...')
+    const { data: existingTables, error: tablesError } = await adminClient
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+
+    if (tablesError) {
+      throw new Error(`查询表结构失败: ${tablesError.message}`)
+    }
+
+    const existingTableNames = existingTables?.map((t: any) => t.table_name) || []
+    console.log('现有表:', existingTableNames)
 
     const migrationQueries = [
       `ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS reply_rate DECIMAL DEFAULT NULL;`,
@@ -71,51 +87,55 @@ export async function GET() {
       `CREATE POLICY "Users can insert CRM settings" ON public.crm_settings FOR INSERT WITH CHECK (auth.uid() = user_id);`,
       `CREATE POLICY "Users can update own CRM settings" ON public.crm_settings FOR UPDATE USING (auth.uid() = user_id);`,
       `CREATE POLICY "Users can delete own CRM settings" ON public.crm_settings FOR DELETE USING (auth.uid() = user_id);`,
-    ];
+    ]
 
-    const results: string[] = [];
+    const results: string[] = []
 
     for (let i = 0; i < migrationQueries.length; i++) {
-      console.log(`执行查询 ${i + 1}/${migrationQueries.length}...`);
+      console.log(`执行查询 ${i + 1}/${migrationQueries.length}...`)
       
-      const { error } = await supabase.rpc('execute_sql', {
+      const { error } = await adminClient.rpc('execute_sql', {
         sql: migrationQueries[i]
-      });
+      })
 
       if (error) {
-        console.error(`查询 ${i + 1} 失败: ${error.message}`);
-        results.push(`查询 ${i + 1} 失败: ${error.message}`);
+        console.error(`查询 ${i + 1} 失败: ${error.message}`)
+        results.push(`查询 ${i + 1} 失败: ${error.message}`)
       } else {
-        results.push(`查询 ${i + 1} 成功`);
-        console.log(`查询 ${i + 1} 成功`);
+        results.push(`查询 ${i + 1} 成功`)
+        console.log(`查询 ${i + 1} 成功`)
       }
     }
 
-    console.log('3. 验证迁移结果...');
-    const { data: newTables, error: newTablesError } = await supabase
+    console.log('3. 验证迁移结果...')
+    const { data: newTables, error: newTablesError } = await adminClient
       .from('information_schema.tables')
       .select('table_name')
-      .eq('table_schema', 'public');
+      .eq('table_schema', 'public')
 
     if (newTablesError) {
-      throw new Error(`验证失败: ${newTablesError.message}`);
+      throw new Error(`验证失败: ${newTablesError.message}`)
     }
 
-    console.log('迁移后表:', JSON.stringify(newTables));
+    const newTableNames = newTables?.map((t: any) => t.table_name) || []
+    console.log('迁移后表:', newTableNames)
+
+    const addedTables = newTableNames.filter((t: string) => !existingTableNames.includes(t))
 
     return NextResponse.json({
       success: true,
       message: '数据库迁移完成！',
-      existingTables: existingTables?.map((t: any) => t.table_name),
-      newTables: newTables?.map((t: any) => t.table_name),
+      existingTables: existingTableNames,
+      newTables: newTableNames,
+      addedTables,
       results,
-    });
+    })
 
   } catch (error: any) {
-    console.error('迁移失败:', error.message);
+    console.error('迁移失败:', error.message)
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
-    );
+    )
   }
 }
