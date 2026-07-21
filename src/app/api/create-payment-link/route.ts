@@ -12,6 +12,33 @@ const PLAN_PRICES = {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Service unavailable',
+          },
+        },
+        { status: 503 }
+      )
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Please log in to continue',
+          },
+        },
+        { status: 401 }
+      )
+    }
 
     const body = await request.json()
     const { plan, email } = body
@@ -29,7 +56,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!email || !email.includes('@')) {
+    const userEmail = email || user.email
+    if (!userEmail || !userEmail.includes('@')) {
       return NextResponse.json(
         {
           success: false,
@@ -42,14 +70,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const apiKey = process.env.CREEM_API_KEY
+    const storeId = process.env.CREEM_STORE_ID
+    
+    if (!apiKey || !storeId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'PAYMENT_ERROR',
+            message: 'Payment service temporarily unavailable',
+          },
+        },
+        { status: 503 }
+      )
+    }
+
     const planConfig = PLAN_PRICES[plan as keyof typeof PLAN_PRICES]
     const paymentLink = await createPaymentLink(
       planConfig.amount,
       'USD',
       planConfig.description,
       {
-        user_email: email,
+        user_email: userEmail,
         plan,
+        user_id: user.id,
       }
     )
 
