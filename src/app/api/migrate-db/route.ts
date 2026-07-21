@@ -16,7 +16,23 @@ async function getAdminClient(): Promise<SupabaseClient | null> {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: {
+      fetch: (url, options) => fetch(url, { ...options, timeout: 30000 }),
+    },
   })
+}
+
+async function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number = 2000): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (i === retries - 1) throw error
+      console.log(`Retry ${i + 1}/${retries} failed, waiting ${delay}ms...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  throw new Error('All retries failed')
 }
 
 export async function GET() {
@@ -48,10 +64,12 @@ export async function GET() {
     console.log('=== 开始数据库迁移 ===')
 
     console.log('1. 检查现有表结构...')
-    const { data: existingTables, error: tablesError } = await adminClient
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
+    const { data: existingTables, error: tablesError } = await retry(async () => 
+      adminClient
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+    )
 
     if (tablesError) {
       throw new Error(`查询表结构失败: ${tablesError.message}`)
@@ -104,24 +122,31 @@ export async function GET() {
     for (let i = 0; i < migrationQueries.length; i++) {
       console.log(`执行查询 ${i + 1}/${migrationQueries.length}...`)
       
-      const { error } = await adminClient.rpc('execute_sql', {
-        sql: migrationQueries[i]
-      })
+      try {
+        const { error } = await retry(async () => 
+          adminClient.rpc('execute_sql', { sql: migrationQueries[i] })
+        )
 
-      if (error) {
-        console.error(`查询 ${i + 1} 失败: ${error.message}`)
-        results.push(`查询 ${i + 1} 失败: ${error.message}`)
-      } else {
-        results.push(`查询 ${i + 1} 成功`)
-        console.log(`查询 ${i + 1} 成功`)
+        if (error) {
+          console.error(`查询 ${i + 1} 失败: ${error.message}`)
+          results.push(`查询 ${i + 1} 失败: ${error.message}`)
+        } else {
+          results.push(`查询 ${i + 1} 成功`)
+          console.log(`查询 ${i + 1} 成功`)
+        }
+      } catch (retryError) {
+        console.error(`查询 ${i + 1} 重试失败: ${(retryError as Error).message}`)
+        results.push(`查询 ${i + 1} 失败: ${(retryError as Error).message}`)
       }
     }
 
     console.log('3. 验证迁移结果...')
-    const { data: newTables, error: newTablesError } = await adminClient
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
+    const { data: newTables, error: newTablesError } = await retry(async () =>
+      adminClient
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+    )
 
     if (newTablesError) {
       throw new Error(`验证失败: ${newTablesError.message}`)
