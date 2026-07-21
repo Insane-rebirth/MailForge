@@ -1,38 +1,32 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { SupabaseClient, createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-async function getAdminClient(): Promise<SupabaseClient | null> {
+async function supabaseRequest(url: string, options?: RequestInit) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-
-  if (!serviceRoleKey || !supabaseUrl) {
-    return null
-  }
-
-  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    global: {
-      fetch: (url, options) => fetch(url, { ...options, timeout: 30000 }),
+  
+  const fullUrl = `${supabaseUrl}${url}`
+  
+  const response = await fetch(fullUrl, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      'Authorization': `Bearer ${serviceRoleKey}`,
+      'apikey': serviceRoleKey!,
+      'Content-Type': 'application/json',
     },
   })
+  
+  return response.json()
 }
 
-async function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number = 2000): Promise<T> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn()
-    } catch (error) {
-      if (i === retries - 1) throw error
-      console.log(`Retry ${i + 1}/${retries} failed, waiting ${delay}ms...`)
-      await new Promise(resolve => setTimeout(resolve, delay))
-    }
-  }
-  throw new Error('All retries failed')
+async function executeSql(sql: string) {
+  const result = await supabaseRequest('/rest/v1/rpc/execute_sql', {
+    method: 'POST',
+    body: JSON.stringify({ sql }),
+  })
+  return result
 }
 
 export async function GET() {
@@ -47,9 +41,7 @@ export async function GET() {
     
     console.log('Environment debug:', JSON.stringify(envDebug))
     
-    const adminClient = await getAdminClient()
-    
-    if (!adminClient) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
       return NextResponse.json(
         { 
           success: false, 
@@ -64,19 +56,12 @@ export async function GET() {
     console.log('=== 开始数据库迁移 ===')
 
     console.log('1. 检查现有表结构...')
-    const { data: existingTables, error: tablesError } = await retry(async () => 
-      adminClient
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-    )
-
-    if (tablesError) {
-      throw new Error(`查询表结构失败: ${tablesError.message}`)
-    }
-
-    const existingTableNames = existingTables?.map((t: any) => t.table_name) || []
-    console.log('现有表:', existingTableNames)
+    const existingTables = await supabaseRequest('/rest/v1/information_schema.tables?select=table_name&table_schema=eq.public')
+    console.log('现有表:', JSON.stringify(existingTables))
+    
+    const existingTableNames = Array.isArray(existingTables) 
+      ? existingTables.map((t: any) => t.table_name) 
+      : []
 
     const migrationQueries = [
       `ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS reply_rate DECIMAL DEFAULT NULL;`,
@@ -123,37 +108,27 @@ export async function GET() {
       console.log(`执行查询 ${i + 1}/${migrationQueries.length}...`)
       
       try {
-        const { error } = await retry(async () => 
-          adminClient.rpc('execute_sql', { sql: migrationQueries[i] })
-        )
-
-        if (error) {
-          console.error(`查询 ${i + 1} 失败: ${error.message}`)
-          results.push(`查询 ${i + 1} 失败: ${error.message}`)
+        const result = await executeSql(migrationQueries[i])
+        
+        if (result?.error) {
+          console.error(`查询 ${i + 1} 失败: ${JSON.stringify(result.error)}`)
+          results.push(`查询 ${i + 1} 失败: ${result.error.message || JSON.stringify(result.error)}`)
         } else {
           results.push(`查询 ${i + 1} 成功`)
           console.log(`查询 ${i + 1} 成功`)
         }
-      } catch (retryError) {
-        console.error(`查询 ${i + 1} 重试失败: ${(retryError as Error).message}`)
-        results.push(`查询 ${i + 1} 失败: ${(retryError as Error).message}`)
+      } catch (error) {
+        console.error(`查询 ${i + 1} 失败: ${(error as Error).message}`)
+        results.push(`查询 ${i + 1} 失败: ${(error as Error).message}`)
       }
     }
 
     console.log('3. 验证迁移结果...')
-    const { data: newTables, error: newTablesError } = await retry(async () =>
-      adminClient
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-    )
-
-    if (newTablesError) {
-      throw new Error(`验证失败: ${newTablesError.message}`)
-    }
-
-    const newTableNames = newTables?.map((t: any) => t.table_name) || []
-    console.log('迁移后表:', newTableNames)
+    const newTables = await supabaseRequest('/rest/v1/information_schema.tables?select=table_name&table_schema=eq.public')
+    
+    const newTableNames = Array.isArray(newTables) 
+      ? newTables.map((t: any) => t.table_name) 
+      : []
 
     const addedTables = newTableNames.filter((t: string) => !existingTableNames.includes(t))
 
