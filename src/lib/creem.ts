@@ -1,4 +1,7 @@
-const CREEM_API_BASE = 'https://api.creem.io/v1'
+const CREEM_API_BASES = [
+  'https://api.creem.io/v1',
+  'https://api.creem.dev/v1',
+]
 
 export interface CreemPaymentLink {
   id: string
@@ -23,29 +26,42 @@ export async function createPaymentLink(
       return null
     }
 
-    const response = await fetch(`${CREEM_API_BASE}/payment-links`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        store_id: storeId,
-        amount,
-        currency,
-        description,
-        metadata,
-      }),
-    })
+    for (const baseUrl of CREEM_API_BASES) {
+      try {
+        console.log(`Trying Creem API: ${baseUrl}`)
+        const response = await fetch(`${baseUrl}/payment-links`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            store_id: storeId,
+            amount,
+            currency,
+            description,
+            metadata,
+          }),
+          timeout: 30000,
+        })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      console.error('Creem API error:', response.status, errorData)
-      return null
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null)
+          console.error(`Creem API error (${baseUrl}): ${response.status}`, errorData)
+          continue
+        }
+
+        const data = await response.json()
+        console.log('Creem payment link created:', data.id)
+        return data
+      } catch (error) {
+        console.error(`Failed to call Creem API (${baseUrl}):`, error)
+        continue
+      }
     }
 
-    const data = await response.json()
-    return data
+    console.error('All Creem API endpoints failed')
+    return null
   } catch (error) {
     console.error('Failed to create payment link:', error)
     return null
@@ -61,19 +77,26 @@ export async function getPaymentLink(linkId: string): Promise<CreemPaymentLink |
       return null
     }
 
-    const response = await fetch(`${CREEM_API_BASE}/payment-links/${linkId}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    })
+    for (const baseUrl of CREEM_API_BASES) {
+      try {
+        const response = await fetch(`${baseUrl}/payment-links/${linkId}`, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 30000,
+        })
 
-    if (!response.ok) {
-      console.error('Creem API error:', response.status)
-      return null
+        if (!response.ok) {
+          continue
+        }
+
+        return await response.json()
+      } catch {
+        continue
+      }
     }
 
-    const data = await response.json()
-    return data
+    return null
   } catch (error) {
     console.error('Failed to get payment link:', error)
     return null
@@ -86,25 +109,34 @@ export async function verifyPayment(linkId: string): Promise<{ paid: boolean; am
     if (!link) return null
 
     const apiKey = process.env.CREEM_API_KEY
-    const response = await fetch(`${CREEM_API_BASE}/payments?payment_link_id=${linkId}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    })
 
-    if (!response.ok) {
-      console.error('Creem API error:', response.status)
-      return null
-    }
+    for (const baseUrl of CREEM_API_BASES) {
+      try {
+        const response = await fetch(`${baseUrl}/payments?payment_link_id=${linkId}`, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 30000,
+        })
 
-    const data = await response.json()
-    const payments = data.data || []
-    
-    if (payments.length > 0) {
-      const latestPayment = payments[payments.length - 1]
-      return {
-        paid: latestPayment.status === 'completed',
-        amount: latestPayment.amount,
+        if (!response.ok) {
+          continue
+        }
+
+        const data = await response.json()
+        const payments = data.data || []
+        
+        if (payments.length > 0) {
+          const latestPayment = payments[payments.length - 1]
+          return {
+            paid: latestPayment.status === 'completed',
+            amount: latestPayment.amount,
+          }
+        }
+
+        return { paid: false }
+      } catch {
+        continue
       }
     }
 
