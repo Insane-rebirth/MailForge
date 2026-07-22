@@ -1,12 +1,22 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createPaymentLink } from '@/lib/creem'
+import { createCheckout, createProduct, listProducts } from '@/lib/creem'
 import { createClient } from '@/lib/supabase/server'
 
-const PLAN_PRICES = {
-  pro: { amount: 2900, description: 'MailForge Pro Plan - Monthly' },
-  business: { amount: 7900, description: 'MailForge Business Plan - Monthly' },
+const PLAN_DETAILS = {
+  pro: { 
+    name: 'MailForge Pro', 
+    description: 'Professional email generation with AI',
+    amount: 2900, 
+    interval: 'monthly' as const 
+  },
+  business: { 
+    name: 'MailForge Business', 
+    description: 'Advanced AI email generation for businesses',
+    amount: 7900, 
+    interval: 'monthly' as const 
+  },
 }
 
 export async function POST(request: NextRequest) {
@@ -70,41 +80,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const apiKey = process.env.CREEM_API_KEY
-    const storeId = process.env.CREEM_STORE_ID
-    
-    if (!apiKey || !storeId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'PAYMENT_ERROR',
-            message: 'Payment service temporarily unavailable',
-          },
-        },
-        { status: 503 }
+    const planConfig = PLAN_DETAILS[plan as keyof typeof PLAN_DETAILS]
+
+    let products = await listProducts()
+    let product = products.find(p => p.name === planConfig.name)
+
+    if (!product) {
+      product = await createProduct(
+        planConfig.name,
+        planConfig.description,
+        planConfig.amount,
+        'USD',
+        planConfig.interval
       )
+      
+      if (!product) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'PAYMENT_ERROR',
+              message: 'Failed to create product',
+            },
+          },
+          { status: 500 }
+        )
+      }
     }
 
-    const planConfig = PLAN_PRICES[plan as keyof typeof PLAN_PRICES]
-    const paymentLink = await createPaymentLink(
-      planConfig.amount,
-      'USD',
-      planConfig.description,
+    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/success?plan=${plan}`
+    const checkout = await createCheckout(
+      product.id,
+      userEmail,
+      successUrl,
       {
-        user_email: userEmail,
-        plan,
         user_id: user.id,
+        plan,
+        user_email: userEmail,
       }
     )
 
-    if (!paymentLink) {
+    if (!checkout) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'PAYMENT_ERROR',
-            message: 'Failed to create payment link',
+            message: 'Failed to create checkout session',
           },
         },
         { status: 500 }
@@ -115,8 +137,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('pending_payments')
         .insert({
-          id: paymentLink.id,
-          user_email: email,
+          id: checkout.id,
+          user_email: userEmail,
           plan,
           amount: planConfig.amount,
           status: 'pending',
@@ -126,8 +148,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        paymentUrl: paymentLink.url,
-        paymentId: paymentLink.id,
+        paymentUrl: checkout.checkoutUrl,
+        paymentId: checkout.id,
       },
     })
   } catch (error) {
