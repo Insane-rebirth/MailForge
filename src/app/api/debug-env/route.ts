@@ -24,5 +24,8 @@ export async function GET() {
     creemApiKeyLength: (process.env.CREEM_API_KEY || '').length,
     hasCreemStoreId: !!process.env.CREEM_STORE_ID,
     hasCreemStoreSlug: !!process.env.CREEM_STORE_SLUG,
+    hasCreemWebhookSecret: !!process.env.CREEM_WEBHOOK_SECRET,
+    creemWebhookSecretLength: (process.env.CREEM_WEBHOOK_SECRET || '').length,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL,
   })
 }
