@@ -1,21 +1,17 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createCheckout, createProduct, listProducts } from '@/lib/creem'
+import { createCheckout } from '@/lib/creem'
 import { createClient } from '@/lib/supabase/server'
 
-const PLAN_DETAILS = {
+const PLAN_CONFIG = {
   pro: { 
-    name: 'MailForge Pro', 
-    description: 'Professional email generation with AI',
+    productId: 'prod_4dAo3HSgudsOS2yPl9l7p3',
     amount: 2900, 
-    interval: 'monthly' as const 
   },
   business: { 
-    name: 'MailForge Business', 
-    description: 'Advanced AI email generation for businesses',
+    productId: 'prod_5PFhRwPFFD22wCpoNjHuUF',
     amount: 7900, 
-    interval: 'monthly' as const 
   },
 }
 
@@ -80,37 +76,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const planConfig = PLAN_DETAILS[plan as keyof typeof PLAN_DETAILS]
-
-    let products = await listProducts()
-    let product = products.find(p => p.name === planConfig.name)
-
-    if (!product) {
-      product = await createProduct(
-        planConfig.name,
-        planConfig.description,
-        planConfig.amount,
-        'USD',
-        planConfig.interval
-      )
-      
-      if (!product) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: 'PAYMENT_ERROR',
-              message: 'Failed to create product',
-            },
-          },
-          { status: 500 }
-        )
-      }
-    }
+    const planConfig = PLAN_CONFIG[plan as keyof typeof PLAN_CONFIG]
 
     const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/success?plan=${plan}`
     const checkout = await createCheckout(
-      product.id,
+      planConfig.productId,
       userEmail,
       successUrl,
       {
