@@ -13,6 +13,7 @@ export async function GET() {
     stripeKeyPrefix: stripeKey.length > 10 ? stripeKey.substring(0, 10) + '...' : stripeKey,
     hasStripePublishableKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     stripePublishableKeyLength: (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').length,
+    stripePublishableKeyPrefix: (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').length > 10 ? (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').substring(0, 10) + '...' : (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''),
     hasStripeProPriceId: !!process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
     stripeProPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
     hasStripeBusinessPriceId: !!process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID,
