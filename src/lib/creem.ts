@@ -39,7 +39,6 @@ export async function createProduct(
         currency,
         billing_interval: billingInterval,
       }),
-      timeout: 30000,
     })
 
     if (!response.ok) {
@@ -69,7 +68,6 @@ export async function listProducts(): Promise<CreemProduct[]> {
       headers: {
         'x-api-key': apiKey,
       },
-      timeout: 30000,
     })
 
     if (!response.ok) {
@@ -121,7 +119,6 @@ export async function createCheckout(
         'x-api-key': apiKey,
       },
       body: JSON.stringify(body),
-      timeout: 30000,
     })
 
     if (!response.ok) {
@@ -155,7 +152,6 @@ export async function retrieveCheckout(checkoutId: string) {
       headers: {
         'x-api-key': apiKey,
       },
-      timeout: 30000,
     })
 
     if (!response.ok) {
@@ -165,6 +161,25 @@ export async function retrieveCheckout(checkoutId: string) {
     return await response.json()
   } catch (error) {
     console.error('Failed to retrieve checkout:', error)
+    return null
+  }
+}
+
+export async function verifyPayment(checkoutId: string): Promise<{ paid: boolean; amount: number; status: string; product: string } | null> {
+  try {
+    const checkout = await retrieveCheckout(checkoutId)
+    if (!checkout) {
+      return null
+    }
+
+    return {
+      paid: checkout.status === 'paid',
+      amount: checkout.amount || 0,
+      status: checkout.status,
+      product: checkout.product || '',
+    }
+  } catch (error) {
+    console.error('Failed to verify payment:', error)
     return null
   }
 }

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createCheckout, createProduct, listProducts } from '@/lib/creem'
+import { listProducts } from '@/lib/creem'
 
 export async function GET() {
   try {

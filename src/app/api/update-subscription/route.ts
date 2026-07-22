@@ -4,19 +4,16 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { retrieveCheckout } from '@/lib/creem'
 
-const CREEM_API_BASE = 'https://api.creem.io/v1'
+const CREEM_PRODUCT_TO_PLAN: Record<string, 'free' | 'pro' | 'business'> = {
+  'prod_4dAo3HSgudsOS2yPl9l7p3': 'pro',
+  'prod_5PFhRwPFFD22wCpoNjHuUF': 'business',
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-06-20',
 })
-
-const PRODUCT_PLAN_MAP: Record<string, 'free' | 'pro' | 'business'> = {
-  'MailForge Pro': 'pro',
-  'MailForge Business': 'business',
-  'Pro': 'pro',
-  'Business': 'business',
-}
 
 const STRIPE_PRICE_TO_PLAN: Record<string, 'free' | 'pro' | 'business'> = {
   [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || '']: 'pro',
@@ -45,31 +42,17 @@ async function verifyPayment(checkoutId: string | undefined, stripeSessionId: st
 
   if (checkoutId) {
     try {
-      const response = await fetch(`${CREEM_API_BASE}/checkouts/${checkoutId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${process.env.CREEM_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      if (!response.ok) {
-        return { success: false, error: 'API request failed' }
+      const checkoutData = await retrieveCheckout(checkoutId)
+      if (!checkoutData) {
+        return { success: false, error: 'Checkout not found' }
       }
-      const checkoutData = await response.json()
       if (checkoutData.status !== 'paid') {
         return { success: false, error: 'Checkout not paid' }
       }
-      const productName = checkoutData.product?.name || checkoutData.product_name || ''
+      const productId = checkoutData.product || ''
       let plan: 'free' | 'pro' | 'business' = 'free'
-      if (PRODUCT_PLAN_MAP[productName]) {
-        plan = PRODUCT_PLAN_MAP[productName]
-      } else {
-        const lowerName = productName.toLowerCase()
-        if (lowerName.includes('business')) {
-          plan = 'business'
-        } else if (lowerName.includes('pro')) {
-          plan = 'pro'
-        }
+      if (CREEM_PRODUCT_TO_PLAN[productId]) {
+        plan = CREEM_PRODUCT_TO_PLAN[productId]
       }
       return { success: true, plan }
     } catch {
