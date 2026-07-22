@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
         .from('pending_payments')
         .insert({
           id: checkout.id,
+          user_id: user.id,
           user_email: userEmail,
           plan,
           amount: planConfig.amount,

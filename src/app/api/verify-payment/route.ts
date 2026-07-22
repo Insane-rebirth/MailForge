@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           .eq('user_id', user.id)
       } else if (userEmail !== 'N/A') {
         const { data: existingUsers } = await supabase
-          .from('users')
+          .from('profiles')
           .select('id')
           .eq('email', userEmail)
           .limit(1)
