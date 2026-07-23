@@ -61,6 +61,22 @@ async function upsertSubscription(
   } else {
     console.log('Subscription upserted successfully:', subscriptionId, 'status:', status)
   }
+
+  if (status === 'active') {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        subscription_tier: plan,
+        subscription_status: 'active',
+      })
+
+    if (profileError) {
+      console.error('Failed to update profile:', profileError)
+    } else {
+      console.log('Profile updated for user:', userId, 'tier:', plan)
+    }
+  }
 }
 
 async function updatePendingPayment(supabase: any, referenceId: string, status: string) {
