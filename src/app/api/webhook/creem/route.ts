@@ -104,7 +104,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const signature = request.headers.get('creem-signature') || request.headers.get('signature')
+    const signature = request.headers.get('creem-signature') 
+      || request.headers.get('signature')
+      || request.headers.get('x-creem-signature')
+      || request.headers.get('x-signature')
     
     if (!signature) {
       console.error('Missing signature header')
@@ -116,16 +119,38 @@ export async function POST(request: Request) {
 
     const body = await request.text()
     
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex')
+    let expectedSignature = ''
+    let signatureValid = false
     
     const sigBuffer = Buffer.from(signature, 'utf-8')
-    const expectedBuffer = Buffer.from(expectedSignature, 'utf-8')
     
-    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+    const algos = [
+      { alg: 'sha256', enc: 'hex' },
+      { alg: 'sha256', enc: 'base64' },
+      { alg: 'sha1', enc: 'hex' },
+      { alg: 'sha1', enc: 'base64' },
+    ]
+    
+    for (const { alg, enc } of algos) {
+      expectedSignature = crypto
+        .createHmac(alg, webhookSecret)
+        .update(body)
+        .digest(enc as any)
+      
+      try {
+        const expectedBuffer = Buffer.from(expectedSignature, enc as any)
+        if (sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+          signatureValid = true
+          console.log(`Signature verified with ${alg}/${enc}`)
+          break
+        }
+      } catch {}
+    }
+    
+    if (!signatureValid) {
       console.error('Invalid webhook signature')
+      console.error('Received:', signature.substring(0, 20) + '...')
+      console.error('Expected (sha256/hex):', expectedSignature.substring(0, 20) + '...')
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 400 }
