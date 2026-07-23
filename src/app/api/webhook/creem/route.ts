@@ -11,14 +11,68 @@ interface CreemWebhookEvent {
   data: {
     object: {
       id: string
+      object?: string
       status?: string
       customer?: string
+      customer_email?: string
       metadata?: Record<string, string>
       amount?: number
       currency?: string
       subscription?: string
       plan?: string
+      product?: string
     }
+  }
+}
+
+function extractUserId(objectData: any): string | null {
+  return objectData?.metadata?.user_id 
+    || objectData?.customer 
+    || objectData?.customer_email
+    || null
+}
+
+function extractPlan(objectData: any): string {
+  return objectData?.metadata?.plan 
+    || objectData?.plan 
+    || 'unknown'
+}
+
+async function upsertSubscription(
+  supabase: any, 
+  subscriptionId: string, 
+  userId: string, 
+  plan: string, 
+  status: string
+) {
+  const { error } = await supabase
+    .from('subscriptions')
+    .upsert({
+      id: subscriptionId,
+      user_id: userId,
+      plan,
+      status,
+      creem_subscription_id: subscriptionId,
+      current_period_end: null,
+    })
+  
+  if (error) {
+    console.error('Failed to upsert subscription:', error)
+  } else {
+    console.log('Subscription upserted successfully:', subscriptionId, 'status:', status)
+  }
+}
+
+async function updatePendingPayment(supabase: any, referenceId: string, status: string) {
+  const { error } = await supabase
+    .from('pending_payments')
+    .update({ status })
+    .or(`creem_checkout_id.eq.${referenceId},id.eq.${referenceId}`)
+  
+  if (error) {
+    console.error(`Failed to update pending payment to ${status}:`, error)
+  } else {
+    console.log(`Pending payment updated to ${status}:`, referenceId)
   }
 }
 
@@ -64,8 +118,7 @@ export async function POST(request: Request) {
 
     const event: CreemWebhookEvent = JSON.parse(body)
     
-    console.log(`Creem webhook received: ${event.type} - ${event.id}`)
-    console.log(`Event data:`, JSON.stringify(event.data, null, 2))
+    console.log(`[Creem Webhook] Received: ${event.type} - ${event.id}`)
 
     const supabase = createServiceClient()
     if (!supabase) {
@@ -78,55 +131,50 @@ export async function POST(request: Request) {
 
     const eventType = event.type
     const objectData = event.data?.object
+    const objectId = objectData?.id
 
     switch (eventType) {
       case 'subscription.created':
-      case 'customer.subscription.created': {
-        const userId = objectData?.metadata?.user_id || objectData?.customer
-        const plan = objectData?.metadata?.plan || 'unknown'
+      case 'customer.subscription.created':
+      case 'subscription.activated': {
+        const userId = extractUserId(objectData)
+        const plan = extractPlan(objectData)
         
-        if (userId) {
-          const { error: subError } = await supabase
-            .from('subscriptions')
-            .upsert({
-              id: objectData?.id,
-              user_id: userId,
-              plan,
-              status: 'active',
-              creem_subscription_id: objectData?.id,
-              current_period_end: null,
-            })
+        if (userId && objectId) {
+          await upsertSubscription(supabase, objectId, userId, plan, 'active')
           
-          if (subError) {
-            console.error('Failed to create subscription:', subError)
-          } else {
-            console.log('Subscription created successfully for user:', userId)
-          }
-          
-          const { error: payError } = await supabase
+          const { error: updateError } = await supabase
             .from('pending_payments')
-            .update({ status: 'completed' })
-            .eq('id', objectData?.id)
+            .update({ status: 'completed', creem_checkout_id: objectId })
+            .eq('user_id', userId)
+            .eq('plan', plan)
+            .eq('status', 'pending')
           
-          if (payError) {
-            console.error('Failed to update pending payment:', payError)
+          if (updateError) {
+            console.error('Failed to update pending payment:', updateError)
+          } else {
+            console.log('Pending payment completed for user:', userId, 'plan:', plan)
           }
+        } else {
+          console.warn(`[Creem Webhook] ${eventType}: Missing userId or objectId`)
         }
         break
       }
 
-      case 'subscription.updated': {
-        const subscriptionId = objectData?.id
+      case 'subscription.updated':
+      case 'customer.subscription.updated': {
         const newStatus = objectData?.status
         
-        if (subscriptionId) {
+        if (objectId) {
           const { error } = await supabase
             .from('subscriptions')
-            .update({ status: newStatus })
-            .eq('creem_subscription_id', subscriptionId)
+            .update({ status: newStatus || 'active' })
+            .eq('creem_subscription_id', objectId)
           
           if (error) {
             console.error('Failed to update subscription:', error)
+          } else {
+            console.log('Subscription updated:', objectId, '->', newStatus)
           }
         }
         break
@@ -134,39 +182,83 @@ export async function POST(request: Request) {
 
       case 'subscription.canceled':
       case 'customer.subscription.deleted': {
-        const subscriptionId = objectData?.id
-        
-        if (subscriptionId) {
+        if (objectId) {
           const { error } = await supabase
             .from('subscriptions')
             .update({ status: 'canceled' })
-            .eq('creem_subscription_id', subscriptionId)
+            .eq('creem_subscription_id', objectId)
           
           if (error) {
             console.error('Failed to cancel subscription:', error)
+          } else {
+            console.log('Subscription canceled:', objectId)
           }
         }
         break
       }
 
       case 'subscription.past_due': {
-        const subscriptionId = objectData?.id
-        
-        if (subscriptionId) {
+        if (objectId) {
           const { error } = await supabase
             .from('subscriptions')
             .update({ status: 'past_due' })
-            .eq('creem_subscription_id', subscriptionId)
+            .eq('creem_subscription_id', objectId)
           
           if (error) {
             console.error('Failed to update subscription status:', error)
+          } else {
+            console.log('Subscription past_due:', objectId)
           }
         }
         break
       }
 
+      case 'payment.succeeded': {
+        const checkoutId = objectData?.id
+        const subscriptionId = objectData?.subscription
+        const userId = extractUserId(objectData)
+        const plan = extractPlan(objectData)
+        
+        if (checkoutId) {
+          const { error } = await supabase
+            .from('pending_payments')
+            .update({ status: 'completed', creem_checkout_id: subscriptionId || checkoutId })
+            .or(`id.eq.${checkoutId},creem_checkout_id.eq.${checkoutId}`)
+          
+          if (error) {
+            console.error('Failed to update pending payment:', error)
+          } else {
+            console.log('Payment succeeded, pending payment updated:', checkoutId)
+          }
+        }
+        
+        if (subscriptionId && userId) {
+          await upsertSubscription(supabase, subscriptionId, userId, plan, 'active')
+          
+          const { error: updateError } = await supabase
+            .from('pending_payments')
+            .update({ status: 'completed', creem_checkout_id: subscriptionId })
+            .eq('user_id', userId)
+            .eq('status', 'pending')
+          
+          if (updateError) {
+            console.error('Failed to update pending payment by user:', updateError)
+          }
+        }
+        break
+      }
+
+      case 'payment.failed': {
+        const checkoutId = objectData?.id
+        
+        if (checkoutId) {
+          await updatePendingPayment(supabase, checkoutId, 'failed')
+        }
+        break
+      }
+
       default:
-        console.log(`Unhandled event type: ${eventType}`)
+        console.log(`[Creem Webhook] Unhandled event type: ${eventType}`)
     }
 
     return NextResponse.json({ 
