@@ -5,6 +5,12 @@ export async function sendPaymentNotification(
   timestamp: string
 ): Promise<boolean> {
   try {
+    const apiKey = process.env.MAILCHANNELS_API_KEY
+    if (!apiKey) {
+      console.log('MailChannels API key not configured, skipping notification')
+      return false
+    }
+
     const webhookUrl = 'https://api.mailchannels.net/tx/v1/send'
 
     const payload = {
@@ -60,6 +66,7 @@ export async function sendPaymentNotification(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
     })
@@ -79,6 +86,12 @@ export async function sendPaymentNotification(
 
 export async function sendTestEmail(): Promise<boolean> {
   try {
+    const apiKey = process.env.MAILCHANNELS_API_KEY
+    if (!apiKey) {
+      console.log('MailChannels API key not configured')
+      return false
+    }
+
     const webhookUrl = 'https://api.mailchannels.net/tx/v1/send'
 
     const payload = {
@@ -114,6 +127,7 @@ export async function sendTestEmail(): Promise<boolean> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
     })

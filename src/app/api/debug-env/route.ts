@@ -1,4 +1,15 @@
-export async function GET() {
+const DEBUG_PASSWORD = process.env.DEBUG_PASSWORD || 'debug_protected'
+
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('x-debug-auth')
+  
+  if (authHeader !== DEBUG_PASSWORD) {
+    return Response.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
   const stripeKey = process.env.STRIPE_SECRET_KEY || ''
   const isPlaceholder = stripeKey === 'sk_test_xxx' || stripeKey.length < 10
   

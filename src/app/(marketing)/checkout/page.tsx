@@ -29,7 +29,6 @@ function CheckoutContent() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
   const [isEmailPreFilled, setIsEmailPreFilled] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'creem' | 'stripe'>('creem')
 
   useEffect(() => {
     const checkUser = async () => {
@@ -140,11 +139,7 @@ function CheckoutContent() {
       return
     }
 
-    if (paymentMethod === 'stripe') {
-      handleStripePayment()
-    } else {
-      handleCreemPayment()
-    }
+    handleCreemPayment()
   }
 
   const plan = PLAN_DETAILS[selectedPlan]
@@ -252,62 +247,19 @@ function CheckoutContent() {
               </div>
 
               {selectedPlan !== 'free' && (
-                <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    Payment Method
-                  </label>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setPaymentMethod('stripe')}
-                      className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${
-                        paymentMethod === 'stripe'
-                          ? 'border-purple-500 bg-purple-500/10'
-                          : 'border-[#2a2a3e] hover:border-[#3a3a4e]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#635bff] rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">S</span>
-                        </div>
-                        <div className="text-left">
-                          <p className="text-white font-medium">Stripe</p>
-                          <p className="text-white/40 text-xs">Visa, MasterCard, Amex</p>
-                        </div>
-                      </div>
-                      {paymentMethod === 'stripe' && (
-                        <CheckCircle className="w-5 h-5 text-purple-400" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setPaymentMethod('creem')}
-                      className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${
-                        paymentMethod === 'creem'
-                          ? 'border-green-500 bg-green-500/10'
-                          : 'border-[#2a2a3e] hover:border-[#3a3a4e]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#10b981] rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">C</span>
-                        </div>
-                        <div className="text-left">
-                          <p className="text-white font-medium">Creem</p>
-                          <p className="text-white/40 text-xs">Supports multiple payment methods</p>
-                        </div>
-                      </div>
-                      {paymentMethod === 'creem' && (
-                        <CheckCircle className="w-5 h-5 text-green-400" />
-                      )}
-                    </button>
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-[#10b981] rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">C</span>
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">Creem Payments</p>
+                      <p className="text-white/40 text-xs">Credit cards, PayPal, and more</p>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {selectedPlan !== 'free' && paymentMethod === 'creem' && (
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                  <p className="text-yellow-400 text-sm">
-                    Click below to complete your payment on Creem secure checkout.
-                    You will be automatically redirected and your subscription will be activated.
+                  <p className="text-green-400 text-sm">
+                    Click below to complete your payment on Creem's secure checkout.
+                    You will be redirected and your subscription will be activated automatically.
                   </p>
                 </div>
               )}
@@ -334,7 +286,7 @@ function CheckoutContent() {
 
             <p className="text-center text-white/40 text-xs mt-4 flex items-center justify-center gap-2">
               <Shield className="w-4 h-4" />
-              Secured by {paymentMethod === 'stripe' ? 'Stripe' : 'Creem'} - 256-bit SSL encryption
+              Secured by Creem - 256-bit SSL encryption
             </p>
           </div>
         </div>
