@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import crypto from 'crypto'
 
 interface CreemWebhookEvent {
   id: string
@@ -45,7 +46,6 @@ export async function POST(request: Request) {
 
     const body = await request.text()
     
-    const crypto = require('crypto')
     const expectedSignature = crypto
       .createHmac('sha256', webhookSecret)
       .update(body)
@@ -67,9 +67,9 @@ export async function POST(request: Request) {
     console.log(`Creem webhook received: ${event.type} - ${event.id}`)
     console.log(`Event data:`, JSON.stringify(event.data, null, 2))
 
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     if (!supabase) {
-      console.error('Supabase client not available')
+      console.error('Supabase service client not available')
       return NextResponse.json(
         { error: 'Database connection failed' },
         { status: 500 }
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         const plan = objectData?.metadata?.plan || 'unknown'
         
         if (userId) {
-          await supabase
+          const { error: subError } = await supabase
             .from('subscriptions')
             .upsert({
               id: objectData?.id,
@@ -96,11 +96,21 @@ export async function POST(request: Request) {
               creem_subscription_id: objectData?.id,
               current_period_end: null,
             })
-            
-          await supabase
+          
+          if (subError) {
+            console.error('Failed to create subscription:', subError)
+          } else {
+            console.log('Subscription created successfully for user:', userId)
+          }
+          
+          const { error: payError } = await supabase
             .from('pending_payments')
             .update({ status: 'completed' })
             .eq('id', objectData?.id)
+          
+          if (payError) {
+            console.error('Failed to update pending payment:', payError)
+          }
         }
         break
       }
@@ -110,10 +120,14 @@ export async function POST(request: Request) {
         const newStatus = objectData?.status
         
         if (subscriptionId) {
-          await supabase
+          const { error } = await supabase
             .from('subscriptions')
             .update({ status: newStatus })
             .eq('creem_subscription_id', subscriptionId)
+          
+          if (error) {
+            console.error('Failed to update subscription:', error)
+          }
         }
         break
       }
@@ -123,10 +137,14 @@ export async function POST(request: Request) {
         const subscriptionId = objectData?.id
         
         if (subscriptionId) {
-          await supabase
+          const { error } = await supabase
             .from('subscriptions')
             .update({ status: 'canceled' })
             .eq('creem_subscription_id', subscriptionId)
+          
+          if (error) {
+            console.error('Failed to cancel subscription:', error)
+          }
         }
         break
       }
@@ -135,10 +153,14 @@ export async function POST(request: Request) {
         const subscriptionId = objectData?.id
         
         if (subscriptionId) {
-          await supabase
+          const { error } = await supabase
             .from('subscriptions')
             .update({ status: 'past_due' })
             .eq('creem_subscription_id', subscriptionId)
+          
+          if (error) {
+            console.error('Failed to update subscription status:', error)
+          }
         }
         break
       }

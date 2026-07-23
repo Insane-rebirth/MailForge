@@ -56,6 +56,11 @@ export async function createProduct(
   }
 }
 
+const KNOWN_PRODUCT_IDS = [
+  'prod_4dAo3HSgudsOS2yPl9l7p3',
+  'prod_5PFhRwPFFD22wCpoNjHuUF',
+]
+
 export async function listProducts(): Promise<CreemProduct[]> {
   try {
     const apiKey = process.env.CREEM_API_KEY
@@ -64,19 +69,33 @@ export async function listProducts(): Promise<CreemProduct[]> {
       return []
     }
 
-    const response = await fetch(`${CREEM_API_BASE}/v1/products/search`, {
-      headers: {
-        'x-api-key': apiKey,
-      },
-    })
+    const products: CreemProduct[] = []
 
-    if (!response.ok) {
-      console.error('Creem list products error:', response.status)
-      return []
+    for (const productId of KNOWN_PRODUCT_IDS) {
+      try {
+        const response = await fetch(`${CREEM_API_BASE}/v1/products?product_id=${productId}`, {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data && data.id) {
+            products.push({
+              id: data.id,
+              name: data.name,
+              status: data.status,
+            })
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to fetch product ${productId}:`, err)
+      }
     }
 
-    const data = await response.json()
-    return data.products || data.data || []
+    return products
   } catch (error) {
     console.error('Failed to list products:', error)
     return []
