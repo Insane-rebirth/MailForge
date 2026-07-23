@@ -12,7 +12,42 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MailForge - AI-Powered B2B Email Generator',
-  description: 'Generate personalized B2B sales emails that actually get replies. 10x faster, 5x more replies.',
+  description: 'Generate professional B2B emails in seconds. AI-powered email generator for cold outreach, follow-ups, and campaigns. Free to start.',
+  keywords: ['b2b email generator', 'ai email writing tool', 'cold outreach email', 'business email generator', 'ai email assistant', 'email marketing automation', 'b2b sales email', 'email writing'],
+  metadataBase: new URL('https://getmailforge.top'),
+  openGraph: {
+    title: 'MailForge - AI-Powered B2B Email Generator',
+    description: 'Generate professional B2B emails in seconds. AI-powered email generator for cold outreach, follow-ups, and campaigns.',
+    url: 'https://getmailforge.top',
+    siteName: 'MailForge',
+    images: [
+      {
+        url: 'https://getmailforge.top/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MailForge - AI Email Generator',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MailForge - AI-Powered B2B Email Generator',
+    description: 'Generate professional B2B emails in seconds. AI-powered email generator.',
+    creator: '@MailForgeAI',
+    images: ['https://getmailforge.top/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
+export const viewport = {
+  themeColor: '#0a0a0f',
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
