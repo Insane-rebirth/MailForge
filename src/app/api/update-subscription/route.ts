@@ -106,6 +106,7 @@ export async function POST(request: Request) {
       .upsert({
         id: userId,
         subscription_tier: plan,
+        subscription_status: 'active',
       })
 
     if (error) {
