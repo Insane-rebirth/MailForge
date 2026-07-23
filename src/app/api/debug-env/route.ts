@@ -3,11 +3,11 @@ const DEBUG_PASSWORD = process.env.DEBUG_PASSWORD || 'debug_protected'
 export async function GET(request: Request) {
   const authHeader = request.headers.get('x-debug-auth')
   
-  if (authHeader !== DEBUG_PASSWORD) {
-    return Response.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
+  if (!authHeader || authHeader !== DEBUG_PASSWORD) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 
   const stripeKey = process.env.STRIPE_SECRET_KEY || ''
