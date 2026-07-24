@@ -57,7 +57,7 @@ export default function BlogPost2() {
       </ul>
       
       <div className="bg-white/5 rounded-lg p-4 my-4">
-        <p className="text-green-400 font-mono text-sm">✓ Good: Quick question about {CompanyName}</p>
+        <p className="text-green-400 font-mono text-sm">✓ Good: Quick question about [CompanyName]</p>
         <p className="text-green-400 font-mono text-sm">✓ Good: Loved your recent post on [Topic]</p>
         <p className="text-red-400 font-mono text-sm">✗ Bad: Best deal on the market!!!</p>
         <p className="text-red-400 font-mono text-sm">✗ Bad: PLEASE READ - Important Offer</p>
@@ -100,21 +100,21 @@ export default function BlogPost2() {
       </p>
       
       <div className="bg-white/5 border border-white/10 rounded-xl p-6 my-8">
-        <p className="text-white/60 text-sm mb-2">Subject: Quick question about {CompanyName}'s growth</p>
-        <p className="text-white/80 mb-4">Hi {FirstName},</p>
+        <p className="text-white/60 text-sm mb-2">Subject: Quick question about [CompanyName]'s growth</p>
+        <p className="text-white/80 mb-4">Hi [FirstName],</p>
         <p className="text-white/80 mb-4">
-          I noticed {CompanyName} recently {specific observation about their company}. 
+          I noticed [CompanyName] recently [specific observation about their company]. 
           Congrats on that!
         </p>
         <p className="text-white/80 mb-4">
-          I work with {industry} companies to help them {specific benefit}. 
-          We've helped clients achieve {specific result - e.g., "30% faster lead conversion"}.
+          I work with [industry] companies to help them [specific benefit]. 
+          We've helped clients achieve [specific result - e.g., "30% faster lead conversion"].
         </p>
         <p className="text-white/80 mb-4">
           Would you be open to a quick 15-minute call next week? 
           I'd love to share a few ideas that might help your team.
         </p>
-        <p className="text-white/80 mb-4">Thanks,<br/>{YourName}</p>
+        <p className="text-white/80 mb-4">Thanks,<br/>[YourName]</p>
       </div>
 
       <h2 className="text-2xl font-bold text-white mt-12 mb-4">Tips for Using AI Email Generators</h2>
