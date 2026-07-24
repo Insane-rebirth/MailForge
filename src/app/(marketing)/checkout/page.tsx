@@ -46,55 +46,6 @@ function CheckoutContent() {
     checkUser()
   }, [])
 
-  const handleStripePayment = async () => {
-    if (!email) {
-      setError('Please enter your email address')
-      return
-    }
-
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address')
-      return
-    }
-
-    setError('')
-    setIsProcessing(true)
-
-    try {
-      const priceId = selectedPlan === 'pro'
-        ? process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
-        : process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID
-
-      if (!priceId) {
-        setError('Payment service temporarily unavailable')
-        setIsProcessing(false)
-        return
-      }
-
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          priceId,
-          successUrl: `${typeof window !== 'undefined' ? window.location.origin : 'https://getmailforge.top'}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${typeof window !== 'undefined' ? window.location.origin : 'https://getmailforge.top'}/checkout?plan=${selectedPlan}&canceled=true`,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success && data.data?.checkoutUrl) {
-        window.location.href = data.data.checkoutUrl
-      } else {
-        setError(data.error?.message || 'Failed to create checkout session')
-      }
-    } catch (error) {
-      setError('Payment service temporarily unavailable')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
   const handleCreemPayment = async () => {
     if (!email) {
       setError('Please enter your email address')
