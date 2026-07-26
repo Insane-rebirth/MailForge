@@ -1,4 +1,4 @@
-﻿import { Metadata } from 'next'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Cold Email Subject Lines That Get Opened: 50+ Proven Examples | MailForge',

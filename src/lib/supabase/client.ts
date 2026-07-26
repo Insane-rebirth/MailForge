@@ -23,7 +23,7 @@ export function getSupabase(): SupabaseClient {
   supabaseClient = createBrowserClient(url, key, {
     auth: {
       persistSession: true,
-      storage: localStorage,
+      flowType: 'implicit',
     },
   })
   

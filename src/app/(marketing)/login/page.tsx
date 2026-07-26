@@ -44,17 +44,17 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const client = getSupabase()
-      const { error } = await client.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: window.location.origin + redirectPath
-        }
+      const state = crypto.randomUUID()
+      
+      const params = new URLSearchParams({
+        client_id: '838193829244049',
+        redirect_uri: 'https://getmailforge.top/auth/callback?provider=facebook',
+        response_type: 'code',
+        scope: 'email',
+        state,
       })
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      }
+      
+      window.location.href = `https://www.facebook.com/dialog/oauth?${params}`
     } catch (err) {
       setError('Failed to sign in with Facebook. Please try again.')
       console.error('Facebook login error:', err)
