@@ -59,14 +59,14 @@ async function handleFacebookCallback(code: string, origin: string) {
 
     const tempPassword = generatePassword()
 
-    const { data: existingUsers } = await serviceClient.auth.listUsers()
+    const { data: existingUsers } = await serviceClient.auth.admin.listUsers()
     
     let userExists = false
-    if (existingUsers) {
-      const user = existingUsers.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    if (existingUsers && existingUsers.users) {
+      const user = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (user) {
         userExists = true
-        const { error: updateError } = await serviceClient.auth.updateUser(user.id, {
+        const { error: updateError } = await serviceClient.auth.admin.updateUserById(user.id, {
           password: tempPassword,
         })
         if (updateError) {
@@ -77,7 +77,7 @@ async function handleFacebookCallback(code: string, origin: string) {
     }
 
     if (!userExists) {
-      const { data: newUser, error: createError } = await serviceClient.auth.createUser({
+      const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
         email,
         password: tempPassword,
         email_confirm: true,
@@ -92,7 +92,7 @@ async function handleFacebookCallback(code: string, origin: string) {
         return NextResponse.redirect(`${origin}/login?error=user_create_failed`)
       }
 
-      if (!newUser) {
+      if (!newUser || !newUser.user) {
         return NextResponse.redirect(`${origin}/login?error=user_create_failed`)
       }
     }
@@ -103,7 +103,7 @@ async function handleFacebookCallback(code: string, origin: string) {
       return NextResponse.redirect(`${origin}/login?error=service_unavailable`)
     }
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password: tempPassword,
     })
