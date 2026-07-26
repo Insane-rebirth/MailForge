@@ -44,17 +44,13 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const client = getSupabase()
-      const { error } = await client.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: window.location.origin + redirectPath
-        }
-      })
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      }
+      const FACEBOOK_APP_ID = '838193829244049'
+      const redirectUri = `${window.location.origin}/auth/callback?provider=facebook`
+      const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      
+      const fbOAuthUrl = `https://www.facebook.com/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email&state=${state}`
+      
+      window.location.href = fbOAuthUrl
     } catch (err) {
       setError('Failed to sign in with Facebook. Please try again.')
       console.error('Facebook login error:', err)
