@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 const FACEBOOK_APP_ID = '838193829244049'
 const FACEBOOK_APP_SECRET = 'b5ca6382a83028233de5259d4959f4d7'
-const FACEBOOK_REDIRECT_URI = 'https://getmailforge.top/auth/callback?provider=facebook'
+const FACEBOOK_REDIRECT_URI = 'https://getmailforge.top/auth/callback'
 
 function generatePassword() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'

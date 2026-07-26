@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 const FACEBOOK_APP_ID = '838193829244049'
 const FACEBOOK_APP_SECRET = 'b5ca6382a83028233de5259d4959f4d7'
-const FACEBOOK_REDIRECT_URI = 'https://getmailforge.top/auth/callback?provider=facebook'
+const FACEBOOK_REDIRECT_URI = 'https://getmailforge.top/auth/callback'
 
 function generatePassword() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
@@ -140,7 +140,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const provider = searchParams.get('provider')
+  const state = searchParams.get('state')
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (error) {
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`)
   }
 
-  if (provider === 'facebook') {
+  if (state && state.startsWith('facebook:')) {
     return handleFacebookCallback(code, origin)
   }
 

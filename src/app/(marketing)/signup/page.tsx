@@ -36,11 +36,13 @@ export default function SignupPage() {
     setError('')
     try {
       const FACEBOOK_APP_ID = '838193829244049'
-      const redirectUri = `${window.location.origin}/auth/callback?provider=facebook`
-      const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const redirectUri = `${window.location.origin}/auth/callback`
+      const randomState = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const state = `facebook:${randomState}`
       
       const fbOAuthUrl = `https://www.facebook.com/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email&state=${state}`
       
+      sessionStorage.setItem('fb_oauth_state', randomState)
       window.location.href = fbOAuthUrl
     } catch (err) {
       setError('Failed to sign up with Facebook. Please try again.')
