@@ -35,14 +35,17 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({
-        client_id: '838193829244049',
-        redirect_uri: 'https://getmailforge.top/auth/facebook/callback',
-        response_type: 'code',
-        scope: 'email',
+      const client = getSupabase()
+      const { error } = await client.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
       })
-      
-      window.location.href = `https://www.facebook.com/dialog/oauth?${params}`
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      }
     } catch (err) {
       setError('Failed to sign up with Facebook. Please try again.')
       console.error('Facebook signup error:', err)
