@@ -15,7 +15,20 @@ function generatePassword() {
   return password
 }
 
-async function handleFacebookCallback(code: string, origin: string) {
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const error = searchParams.get('error')
+
+  if (error) {
+    console.error('Facebook auth error:', error)
+    return NextResponse.redirect(`${origin}/login?error=facebook_auth_failed`)
+  }
+
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=facebook_no_code`)
+  }
+
   try {
     const fbTokenResponse = await fetch(
       `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&code=${code}`
@@ -118,43 +131,4 @@ async function handleFacebookCallback(code: string, origin: string) {
     console.error('Facebook OAuth error:', err)
     return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
   }
-}
-
-async function handleSupabaseCallback(code: string, origin: string, next: string) {
-  const supabase = await createClient()
-  if (!supabase) {
-    console.error('Supabase not configured')
-    return NextResponse.redirect(`${origin}/login?error=service_unavailable`)
-  }
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-  
-  if (!exchangeError) {
-    return NextResponse.redirect(`${origin}${next}`)
-  } else {
-    console.error('Failed to exchange code:', exchangeError)
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`)
-  }
-}
-
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const error = searchParams.get('error')
-  const provider = searchParams.get('provider')
-  const next = searchParams.get('next') ?? '/dashboard'
-
-  if (error) {
-    console.error('Auth error:', error)
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error)}`)
-  }
-
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login`)
-  }
-
-  if (provider === 'facebook') {
-    return handleFacebookCallback(code, origin)
-  }
-
-  return handleSupabaseCallback(code, origin, next)
 }
