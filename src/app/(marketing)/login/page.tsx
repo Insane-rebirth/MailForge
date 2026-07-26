@@ -44,14 +44,11 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const state = crypto.randomUUID()
-      
       const params = new URLSearchParams({
         client_id: '838193829244049',
         redirect_uri: 'https://getmailforge.top/auth/facebook/callback',
         response_type: 'code',
         scope: 'email',
-        state,
       })
       
       window.location.href = `https://www.facebook.com/dialog/oauth?${params}`

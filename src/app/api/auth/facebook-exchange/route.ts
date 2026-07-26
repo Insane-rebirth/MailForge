@@ -15,28 +15,22 @@ function generatePassword() {
   return password
 }
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const error = searchParams.get('error')
-
-  if (error) {
-    console.error('Facebook auth error:', error)
-    return NextResponse.redirect(`${origin}/login?error=facebook_auth_failed`)
-  }
-
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=facebook_no_code`)
-  }
-
+export async function POST(request: Request) {
   try {
+    const { code } = await request.json()
+
+    if (!code) {
+      return NextResponse.json({ success: false, error: 'No authorization code provided' }, { status: 400 })
+    }
+
     const fbTokenResponse = await fetch(
       `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&redirect_uri=${encodeURIComponent(FACEBOOK_REDIRECT_URI)}&code=${code}`
     )
 
     if (!fbTokenResponse.ok) {
-      console.error('Facebook token exchange failed:', await fbTokenResponse.text())
-      return NextResponse.redirect(`${origin}/login?error=facebook_token_failed`)
+      const errorText = await fbTokenResponse.text()
+      console.error('Facebook token exchange failed:', errorText)
+      return NextResponse.json({ success: false, error: 'Failed to exchange Facebook authorization code' }, { status: 500 })
     }
 
     const fbTokenData = await fbTokenResponse.json()
@@ -44,47 +38,57 @@ export async function GET(request: Request) {
 
     if (!fbAccessToken) {
       console.error('No access token from Facebook')
-      return NextResponse.redirect(`${origin}/login?error=facebook_no_token`)
+      return NextResponse.json({ success: false, error: 'No access token received from Facebook' }, { status: 500 })
     }
 
     const fbUserResponse = await fetch(
-      `https://graph.facebook.com/me?access_token=${fbAccessToken}&fields=email,id,name`
+      `https://graph.facebook.com/me?access_token=${fbAccessToken}&fields=email,id,name,picture`
     )
 
     if (!fbUserResponse.ok) {
       console.error('Facebook user fetch failed:', await fbUserResponse.text())
-      return NextResponse.redirect(`${origin}/login?error=facebook_user_failed`)
+      return NextResponse.json({ success: false, error: 'Failed to fetch Facebook user data' }, { status: 500 })
     }
 
     const fbUserData = await fbUserResponse.json()
     const email = fbUserData.email
     const fbId = fbUserData.id
+    const fbName = fbUserData.name
 
     if (!email) {
-      return NextResponse.redirect(`${origin}/login?error=facebook_no_email`)
+      return NextResponse.json({ success: false, error: 'Facebook account does not have an email address' }, { status: 400 })
     }
 
     const serviceClient = createServiceClient()
     if (!serviceClient) {
       console.error('Supabase service client not configured')
-      return NextResponse.redirect(`${origin}/login?error=service_unavailable`)
+      return NextResponse.json({ success: false, error: 'Service unavailable' }, { status: 500 })
     }
 
     const tempPassword = generatePassword()
 
     const { data: existingUsers } = await serviceClient.auth.admin.listUsers()
-    
+
     let userExists = false
+
     if (existingUsers && existingUsers.users) {
       const user = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (user) {
         userExists = true
+
         const { error: updateError } = await serviceClient.auth.admin.updateUserById(user.id, {
           password: tempPassword,
+          user_metadata: {
+            ...user.user_metadata,
+            facebook_id: fbId,
+            facebook_name: fbName,
+            provider: 'facebook',
+          },
         })
+
         if (updateError) {
-          console.error('Failed to update user password:', updateError)
-          return NextResponse.redirect(`${origin}/login?error=user_update_failed`)
+          console.error('Failed to update user:', updateError)
+          return NextResponse.json({ success: false, error: 'Failed to update account' }, { status: 500 })
         }
       }
     }
@@ -96,24 +100,25 @@ export async function GET(request: Request) {
         email_confirm: true,
         user_metadata: {
           facebook_id: fbId,
+          facebook_name: fbName,
           provider: 'facebook',
         },
       })
 
       if (createError) {
         console.error('Failed to create user:', createError)
-        return NextResponse.redirect(`${origin}/login?error=user_create_failed`)
+        return NextResponse.json({ success: false, error: 'Failed to create account' }, { status: 500 })
       }
 
       if (!newUser || !newUser.user) {
-        return NextResponse.redirect(`${origin}/login?error=user_create_failed`)
+        return NextResponse.json({ success: false, error: 'Failed to create account' }, { status: 500 })
       }
     }
 
     const supabase = await createClient()
     if (!supabase) {
       console.error('Supabase client not configured')
-      return NextResponse.redirect(`${origin}/login?error=service_unavailable`)
+      return NextResponse.json({ success: false, error: 'Service unavailable' }, { status: 500 })
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -123,12 +128,12 @@ export async function GET(request: Request) {
 
     if (signInError) {
       console.error('Failed to sign in:', signInError)
-      return NextResponse.redirect(`${origin}/login?error=signin_failed`)
+      return NextResponse.json({ success: false, error: 'Failed to sign in' }, { status: 500 })
     }
 
-    return NextResponse.redirect(`${origin}/dashboard`)
+    return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Facebook OAuth error:', err)
-    return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+    console.error('Facebook OAuth exchange error:', err)
+    return NextResponse.json({ success: false, error: 'An unexpected error occurred' }, { status: 500 })
   }
 }
