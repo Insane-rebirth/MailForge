@@ -51,12 +51,13 @@ export async function POST(request: Request) {
     }
 
     const fbUserData = await fbUserResponse.json()
-    const email = fbUserData.email
     const fbId = fbUserData.id
     const fbName = fbUserData.name
+    let email = fbUserData.email
 
     if (!email) {
-      return NextResponse.json({ success: false, error: 'Facebook account does not have an email address' }, { status: 400 })
+      email = `fb_${fbId}@facebook.local`
+      console.log('No email from Facebook, using generated email:', email)
     }
 
     const serviceClient = createServiceClient()
