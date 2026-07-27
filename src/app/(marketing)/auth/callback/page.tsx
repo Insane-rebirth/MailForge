@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getSupabase } from '@/lib/supabase/client'
 
 function CallbackContent() {
   const searchParams = useSearchParams()
@@ -82,21 +81,11 @@ function CallbackContent() {
             }, 2000)
           }
         } else {
-          const { error: exchangeError } = await getSupabase().auth.exchangeCodeForSession(code)
-          
-          if (!exchangeError) {
-            setStatus('success')
-            setTimeout(() => {
-              window.location.href = '/dashboard'
-            }, 1000)
-          } else {
-            console.error('Failed to exchange code:', exchangeError)
-            setErrorMessage('Failed to exchange authorization code')
-            setStatus('error')
-            setTimeout(() => {
-              window.location.href = '/login?error=auth_failed'
-            }, 2000)
-          }
+          setErrorMessage('Invalid authorization state')
+          setStatus('error')
+          setTimeout(() => {
+            window.location.href = '/login?error=invalid_state'
+          }, 2000)
         }
       } catch (err) {
         console.error('Callback error:', err)
