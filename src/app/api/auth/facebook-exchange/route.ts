@@ -22,6 +22,7 @@ const FACEBOOK_APP_SECRET = (FACEBOOK_APP_ID === CONSUMER_APP_ID)
   ? CONSUMER_APP_SECRET
   : (process.env.FACEBOOK_APP_SECRET || CONSUMER_APP_SECRET)
 const FACEBOOK_REDIRECT_URI = (process.env.NEXT_PUBLIC_APP_URL || 'https://getmailforge.top') + '/auth/callback'
+const CODE_VERSION = 'v3-with-diagnostics'
 
 function generatePassword() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
@@ -75,7 +76,17 @@ export async function POST(request: Request) {
       // #region debug-point facebook-exchange-4
       console.error('[DEBUG FB-EXCHANGE] Facebook token exchange FAILED:', errorText)
       // #endregion
-      return NextResponse.json({ success: false, error: `Facebook token exchange error: ${errorText}` }, { status: 500 })
+      return NextResponse.json({
+        success: false,
+        error: `Facebook token exchange error: ${errorText}`,
+        debug: {
+          version: CODE_VERSION,
+          appId: FACEBOOK_APP_ID,
+          secretMatchesHardcoded: FACEBOOK_APP_SECRET === CONSUMER_APP_SECRET,
+          secretLength: FACEBOOK_APP_SECRET?.length,
+          redirectUri: effectiveRedirectUri,
+        }
+      }, { status: 500 })
     }
 
     const fbTokenData = await fbTokenResponse.json()
