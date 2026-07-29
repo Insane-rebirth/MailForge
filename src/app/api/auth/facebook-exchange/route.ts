@@ -13,8 +13,14 @@ const CONSUMER_APP_SECRET = 'f3335a10dd2eba15d43720bf215a967c'
 const envAppId = process.env.FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
 const FACEBOOK_APP_ID = (!envAppId || envAppId === OLD_BUSINESS_APP_ID) ? CONSUMER_APP_ID : envAppId
 
-// Use matching secret for the determined App ID
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || CONSUMER_APP_SECRET
+// CRITICAL: App Secret MUST match the App ID.
+// If we override to Consumer App ID, we MUST also use Consumer App Secret.
+// A mismatched App ID + Secret causes Facebook token exchange to fail silently
+// with "invalid code" — even though the code is perfectly valid.
+// This happens when Vercel env still has the OLD Business App's secret.
+const FACEBOOK_APP_SECRET = (FACEBOOK_APP_ID === CONSUMER_APP_ID)
+  ? CONSUMER_APP_SECRET
+  : (process.env.FACEBOOK_APP_SECRET || CONSUMER_APP_SECRET)
 const FACEBOOK_REDIRECT_URI = (process.env.NEXT_PUBLIC_APP_URL || 'https://getmailforge.top') + '/auth/callback'
 
 function generatePassword() {
