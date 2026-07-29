@@ -171,18 +171,28 @@ export async function POST(request: Request) {
 
       // Update profiles table — ONLY touch facebook_id and facebook_name
       // Do NOT touch: subscription_tier, emails_used_this_month, stripe_customer_id, etc.
-      const { error: profileUpdateError } = await serviceClient
-        .from('profiles')
-        .update({
-          facebook_id: fbId,
-          facebook_name: fbName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
+      // Retry up to 3 times to ensure facebook_id is saved (critical for future logins)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error: profileUpdateError } = await serviceClient
+          .from('profiles')
+          .update({
+            facebook_id: fbId,
+            facebook_name: fbName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId)
 
-      if (profileUpdateError) {
-        console.error('Failed to update profile with facebook_id:', profileUpdateError)
-        // Non-fatal: login can still proceed
+        if (!profileUpdateError) {
+          console.log(`Profile facebook_id saved (attempt ${attempt})`)
+          break
+        }
+        if (attempt === 3) {
+          console.error('Failed to update profile facebook_id after 3 attempts:', profileUpdateError)
+          // Non-fatal: login can still proceed, but future logins may not match by facebook_id
+          // The auth user_metadata still has facebook_id as a backup
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 200 * attempt))
+        }
       }
 
       console.log('Existing user login successful, subscription preserved:', userId, 'sign-in email:', signInEmail)
@@ -211,29 +221,42 @@ export async function POST(request: Request) {
       userId = newUser.user.id
 
       // Explicitly create profiles record (in addition to DB trigger)
-      // This ensures profiles row exists even if trigger fails
-      const { error: profileError } = await serviceClient
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: email,
-          full_name: fbName,
-          facebook_id: fbId,
-          facebook_name: fbName,
-          subscription_tier: 'free',
-          emails_used_this_month: 0,
-          last_usage_reset: new Date().toISOString(),
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: false,
-        })
+      // This ensures profiles row exists with facebook_id even if trigger fails.
+      // Retry up to 3 times — facebook_id is CRITICAL for future logins.
+      let profileCreated = false
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error: profileError } = await serviceClient
+          .from('profiles')
+          .upsert({
+            id: userId,
+            email: email,
+            full_name: fbName,
+            facebook_id: fbId,
+            facebook_name: fbName,
+            subscription_tier: 'free',
+            subscription_status: 'inactive',
+            emails_used_this_month: 0,
+            last_usage_reset: new Date().toISOString(),
+          }, {
+            onConflict: 'id',
+            ignoreDuplicates: false,
+          })
 
-      if (profileError) {
-        console.error('Failed to create profile (trigger may handle it):', profileError)
-        // Non-fatal: DB trigger should have created it
+        if (!profileError) {
+          profileCreated = true
+          console.log(`Profile created with facebook_id (attempt ${attempt})`)
+          break
+        }
+        if (attempt === 3) {
+          console.error('Failed to create profile after 3 attempts:', profileError)
+          // Non-fatal: DB trigger should have created a minimal profile.
+          // The auth user_metadata has facebook_id as a backup for future logins.
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 200 * attempt))
+        }
       }
 
-      console.log('New user created:', userId, 'with facebook_id:', fbId)
+      console.log('New user created:', userId, 'with facebook_id:', fbId, 'profile created:', profileCreated)
     }
 
     if (!userId) {
@@ -241,23 +264,46 @@ export async function POST(request: Request) {
     }
 
     // Step 4: Sign in with the temporary password
+    // CRITICAL: This is the last step. Retry up to 3 times with increasing delays
+    // because Supabase's auth cluster may take time to propagate password updates.
     const supabase = await createClient()
     if (!supabase) {
       console.error('Supabase client not configured')
       return NextResponse.json({ success: false, error: 'Service unavailable' }, { status: 500 })
     }
 
-    // Small delay to ensure password update propagates across Supabase's auth cluster
-    await new Promise(resolve => setTimeout(resolve, 500))
+    let signInError: any = null
+    let signedIn = false
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: signInEmail,
-      password: tempPassword,
-    })
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      // Wait before each attempt (longer for later attempts)
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt))
 
-    if (signInError) {
-      console.error('Failed to sign in:', signInError)
-      return NextResponse.json({ success: false, error: 'Failed to sign in' }, { status: 500 })
+      const result = await supabase.auth.signInWithPassword({
+        email: signInEmail,
+        password: tempPassword,
+      })
+
+      if (!result.error) {
+        signedIn = true
+        console.log(`Sign-in successful on attempt ${attempt}`)
+        break
+      }
+
+      signInError = result.error
+      console.error(`Sign-in attempt ${attempt} failed:`, signInError.message)
+
+      // If the error is "Invalid credentials", the password update may not have
+      // propagated yet. Wait and retry. If it's a different error (e.g., user
+      // not found), retrying won't help but we still try as a last resort.
+    }
+
+    if (!signedIn) {
+      console.error('All sign-in attempts failed. Last error:', signInError)
+      return NextResponse.json({
+        success: false,
+        error: 'Login failed after multiple attempts. Please try again.',
+      }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

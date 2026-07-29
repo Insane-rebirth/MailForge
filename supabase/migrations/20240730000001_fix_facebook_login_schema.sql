@@ -55,11 +55,30 @@ CREATE POLICY "Users can view own subscriptions" ON public.subscriptions
 ALTER TABLE public.pending_payments ADD COLUMN IF NOT EXISTS creem_checkout_id TEXT;
 
 -- 4. Update handle_new_user trigger to include facebook fields
+-- CRITICAL: Copy facebook_id from user_metadata so that even if the explicit
+-- profiles insert in the API fails, the trigger still saves facebook_id.
+-- This is the last-resort backup for reliable user matching on re-login.
 CREATE OR REPLACE FUNCTION public.handle_new_user_trigger()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, subscription_tier, subscription_status)
-  VALUES (NEW.id, NEW.email, 'free', 'inactive')
+  INSERT INTO public.profiles (
+    id,
+    email,
+    subscription_tier,
+    subscription_status,
+    facebook_id,
+    facebook_name,
+    full_name
+  )
+  VALUES (
+    NEW.id,
+    NEW.email,
+    'free',
+    'inactive',
+    NEW.raw_user_meta_data->>'facebook_id',
+    NEW.raw_user_meta_data->>'facebook_name',
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'facebook_name', NEW.email)
+  )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
