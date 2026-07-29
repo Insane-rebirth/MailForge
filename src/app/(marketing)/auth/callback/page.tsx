@@ -65,6 +65,17 @@ function CallbackContent() {
           sessionStorage.removeItem('fb_oauth_state')
           
           const redirectUri = `${window.location.origin}/auth/callback`
+          
+          // #region debug-point callback-1
+          console.log('[DEBUG CALLBACK] Sending to facebook-exchange:', {
+            codeLength: code.length,
+            codePrefix: code.substring(0, 20),
+            redirectUri,
+            windowOrigin: window.location.origin,
+            fullUrl: window.location.href,
+          })
+          // #endregion
+          
           const response = await fetch('/api/auth/facebook-exchange', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -73,12 +84,21 @@ function CallbackContent() {
           
           const data = await response.json()
           
+          // #region debug-point callback-2
+          console.log('[DEBUG CALLBACK] Response from facebook-exchange:', {
+            status: response.status,
+            ok: response.ok,
+            data,
+          })
+          // #endregion
+          
           if (response.ok && data.success) {
             setStatus('success')
             setTimeout(() => {
               window.location.href = '/dashboard'
             }, 1000)
           } else {
+            // Show the actual error from the server so we can diagnose
             setErrorMessage(data.error || 'Facebook login failed')
             setStatus('error')
             setTimeout(() => {

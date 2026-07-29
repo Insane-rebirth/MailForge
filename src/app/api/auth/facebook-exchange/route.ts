@@ -30,21 +30,46 @@ export async function POST(request: Request) {
   try {
     const { code, redirectUri } = await request.json()
 
+    // #region debug-point facebook-exchange-1
+    console.log('[DEBUG FB-EXCHANGE] Incoming request:', {
+      hasCode: !!code,
+      codeLength: code?.length || 0,
+      redirectUriFromClient: redirectUri || '(none)',
+      redirectUriFromEnv: FACEBOOK_REDIRECT_URI,
+      FACEBOOK_APP_ID,
+      envAppId,
+      FACEBOOK_APP_SECRET_LENGTH: FACEBOOK_APP_SECRET?.length || 0,
+      envAppSecret: process.env.FACEBOOK_APP_SECRET ? 'set' : 'not_set',
+      appUrlEnv: process.env.NEXT_PUBLIC_APP_URL || '(not set)',
+    })
+    // #endregion
+
     if (!code) {
       return NextResponse.json({ success: false, error: 'No authorization code provided' }, { status: 400 })
     }
 
     const effectiveRedirectUri = redirectUri || FACEBOOK_REDIRECT_URI
 
+    // #region debug-point facebook-exchange-2
+    console.log('[DEBUG FB-EXCHANGE] Effective redirectUri:', effectiveRedirectUri)
+    console.log('[DEBUG FB-EXCHANGE] Facebook token URL:', `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(effectiveRedirectUri)}&code=${code?.substring(0, 20)}...`)
+    // #endregion
+
     // Step 1: Exchange authorization code for Facebook access token
     const fbTokenResponse = await fetch(
       `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&redirect_uri=${encodeURIComponent(effectiveRedirectUri)}&code=${code}`
     )
 
+    // #region debug-point facebook-exchange-3
+    console.log('[DEBUG FB-EXCHANGE] Facebook token response status:', fbTokenResponse.status)
+    // #endregion
+
     if (!fbTokenResponse.ok) {
       const errorText = await fbTokenResponse.text()
-      console.error('Facebook token exchange failed:', errorText)
-      return NextResponse.json({ success: false, error: 'Failed to exchange Facebook authorization code' }, { status: 500 })
+      // #region debug-point facebook-exchange-4
+      console.error('[DEBUG FB-EXCHANGE] Facebook token exchange FAILED:', errorText)
+      // #endregion
+      return NextResponse.json({ success: false, error: `Facebook token exchange error: ${errorText}` }, { status: 500 })
     }
 
     const fbTokenData = await fbTokenResponse.json()
