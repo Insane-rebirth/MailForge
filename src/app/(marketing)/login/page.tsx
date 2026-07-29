@@ -20,12 +20,22 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const FACEBOOK_APP_ID = '838193829244049'
+      // Use the Consumer-type Facebook App (1330758902461953) which is in Live mode
+      // This app does NOT require business verification, so all users can log in
+      // CRITICAL: If env var is set to the old Business-type app (838193829244049),
+      // override it with the new Consumer-type app that's already in Live mode
+      const OLD_BUSINESS_APP_ID = '838193829244049'
+      const CONSUMER_APP_ID = '1330758902461953'
+      const envAppId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
+      const FACEBOOK_APP_ID = (!envAppId || envAppId === OLD_BUSINESS_APP_ID) ? CONSUMER_APP_ID : envAppId
       const redirectUri = `${window.location.origin}/auth/callback`
       const randomState = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
       const state = `facebook:${randomState}`
       
-      const fbOAuthUrl = `https://www.facebook.com/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}`
+      // Request both public_profile and email scopes
+      // email allows us to match users who registered with email
+      // If email permission is not granted, we fall back to facebook_id matching
+      const fbOAuthUrl = `https://www.facebook.com/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email,public_profile&state=${state}`
       
       sessionStorage.setItem('fb_oauth_state', randomState)
       window.location.href = fbOAuthUrl

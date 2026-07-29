@@ -39,42 +39,123 @@ function extractPlan(objectData: any): string {
 }
 
 async function upsertSubscription(
-  supabase: any, 
-  subscriptionId: string, 
-  userId: string, 
-  plan: string, 
+  supabase: any,
+  subscriptionId: string,
+  userId: string,
+  plan: string,
   status: string
 ) {
-  const { error } = await supabase
-    .from('subscriptions')
-    .upsert({
-      id: subscriptionId,
-      user_id: userId,
-      plan,
-      status,
-      creem_subscription_id: subscriptionId,
-      current_period_end: null,
-    })
-  
-  if (error) {
-    console.error('Failed to upsert subscription:', error)
-  } else {
-    console.log('Subscription upserted successfully:', subscriptionId, 'status:', status)
+  // Resolve the real UUID for the user.
+  // userId from webhook metadata is usually a UUID, but Creem sometimes
+  // sends the customer email or Creem customer ID instead. We must resolve
+  // it to the actual profiles.id UUID so both tables update correctly.
+  let realUserId: string | null = userId
+
+  // Check if userId looks like a UUID (contains dashes, 36 chars).
+  // If not, try to resolve it by looking up the email in profiles.
+  const isLikelyUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
+
+  if (!isLikelyUuid) {
+    // userId is probably an email or customer ID — resolve to UUID via email
+    const { data: profileByEmail } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('email', userId)
+      .limit(1)
+
+    if (profileByEmail && profileByEmail.length > 0) {
+      realUserId = profileByEmail[0].id
+      console.log('Resolved userId from email to UUID:', userId, '->', realUserId)
+    } else {
+      console.error('Could not resolve UUID for userId:', userId)
+      // Still try the profiles update by email as a last resort below
+    }
+  }
+
+  // Upsert into subscriptions table with the resolved UUID.
+  // Only attempt this if we have a valid UUID — either the original (if it was a UUID)
+  // or the one we resolved by email lookup.
+  const hasValidUuid = isLikelyUuid || (realUserId !== userId)
+
+  if (hasValidUuid && realUserId) {
+    const { error } = await supabase
+      .from('subscriptions')
+      .upsert({
+        id: subscriptionId,
+        user_id: realUserId,
+        plan,
+        status,
+        creem_subscription_id: subscriptionId,
+        current_period_end: null,
+        updated_at: new Date().toISOString(),
+      })
+
+    if (error) {
+      console.error('Failed to upsert subscription:', error)
+    } else {
+      console.log('Subscription upserted successfully:', subscriptionId, 'status:', status)
+    }
   }
 
   if (status === 'active') {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        subscription_tier: plan,
-        subscription_status: 'active',
-      })
+    // CRITICAL: Use UPDATE, not UPSERT — only touch subscription fields
+    // Do NOT overwrite email, full_name, facebook_id, emails_used_this_month, etc.
+    if (realUserId && realUserId !== userId) {
+      // We resolved a different UUID — update by that UUID
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          subscription_tier: plan,
+          subscription_status: 'active',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', realUserId)
 
-    if (profileError) {
-      console.error('Failed to update profile:', profileError)
+      if (profileError) {
+        console.error('Failed to update profile subscription:', profileError)
+      } else {
+        console.log('Profile subscription updated for user:', realUserId, 'tier:', plan)
+      }
     } else {
-      console.log('Profile updated for user:', userId, 'tier:', plan)
+      // Try updating by the original userId (UUID case)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          subscription_tier: plan,
+          subscription_status: 'active',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (profileError) {
+        console.error('Failed to update profile subscription:', profileError)
+        // Retry: userId might be an email — try looking up by email first
+        const { data: profileByEmail } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('email', userId)
+          .limit(1)
+
+        if (profileByEmail && profileByEmail.length > 0) {
+          const resolvedId = profileByEmail[0].id
+          const { error: retryError } = await supabase
+            .from('profiles')
+            .update({
+              subscription_tier: plan,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', resolvedId)
+
+          if (retryError) {
+            console.error('Retry update failed:', retryError)
+          } else {
+            console.log('Profile updated by email lookup:', resolvedId, 'tier:', plan)
+          }
+        }
+      } else {
+        console.log('Profile subscription updated for user:', userId, 'tier:', plan)
+      }
     }
   }
 }

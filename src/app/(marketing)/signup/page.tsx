@@ -12,7 +12,7 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
     try {
-      const FACEBOOK_APP_ID = '838193829244049'
+      const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '1330758902461953'
       const redirectUri = `${window.location.origin}/auth/callback`
       const randomState = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
       const state = `facebook:${randomState}`

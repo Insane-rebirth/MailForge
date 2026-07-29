@@ -1,14 +1,18 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 function CallbackContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing')
   const [errorMessage, setErrorMessage] = useState('')
+  const processedRef = useRef(false)
 
   useEffect(() => {
+    if (processedRef.current) return
+    processedRef.current = true
+
     async function handleCallback() {
       try {
         let code: string | null = null
@@ -60,10 +64,11 @@ function CallbackContent() {
           
           sessionStorage.removeItem('fb_oauth_state')
           
+          const redirectUri = `${window.location.origin}/auth/callback`
           const response = await fetch('/api/auth/facebook-exchange', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ code, redirectUri }),
           })
           
           const data = await response.json()
