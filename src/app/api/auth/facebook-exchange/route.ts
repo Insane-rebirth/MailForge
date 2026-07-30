@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 // and will show "App not active" error to foreign users
 const OLD_BUSINESS_APP_ID = '838193829244049'
 const CONSUMER_APP_ID = '1330758902461953'
-const CONSUMER_APP_SECRET = 'f3335a10dd2eba15d43720bf215a967c'
+const CONSUMER_APP_SECRET = 'cbc1fda097bbe930144df7284923d028'
 
 // Determine which App ID to use — override if env var is set to old Business app
 const envAppId = process.env.FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
@@ -15,14 +15,12 @@ const FACEBOOK_APP_ID = (!envAppId || envAppId === OLD_BUSINESS_APP_ID) ? CONSUM
 
 // CRITICAL: App Secret MUST match the App ID.
 // If we override to Consumer App ID, we MUST also use Consumer App Secret.
-// A mismatched App ID + Secret causes Facebook token exchange to fail silently
-// with "invalid code" — even though the code is perfectly valid.
-// This happens when Vercel env still has the OLD Business App's secret.
+// A mismatched App ID + Secret causes Facebook token exchange to fail with
+// "Error validating client secret" — even though the code is perfectly valid.
 const FACEBOOK_APP_SECRET = (FACEBOOK_APP_ID === CONSUMER_APP_ID)
   ? CONSUMER_APP_SECRET
   : (process.env.FACEBOOK_APP_SECRET || CONSUMER_APP_SECRET)
 const FACEBOOK_REDIRECT_URI = (process.env.NEXT_PUBLIC_APP_URL || 'https://getmailforge.top') + '/auth/callback'
-const CODE_VERSION = 'v3-with-diagnostics'
 
 function generatePassword() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
@@ -37,56 +35,21 @@ export async function POST(request: Request) {
   try {
     const { code, redirectUri } = await request.json()
 
-    // #region debug-point facebook-exchange-1
-    console.log('[DEBUG FB-EXCHANGE] Incoming request:', {
-      hasCode: !!code,
-      codeLength: code?.length || 0,
-      redirectUriFromClient: redirectUri || '(none)',
-      redirectUriFromEnv: FACEBOOK_REDIRECT_URI,
-      FACEBOOK_APP_ID,
-      envAppId,
-      FACEBOOK_APP_SECRET_LENGTH: FACEBOOK_APP_SECRET?.length || 0,
-      envAppSecret: process.env.FACEBOOK_APP_SECRET ? 'set' : 'not_set',
-      appUrlEnv: process.env.NEXT_PUBLIC_APP_URL || '(not set)',
-    })
-    // #endregion
-
     if (!code) {
       return NextResponse.json({ success: false, error: 'No authorization code provided' }, { status: 400 })
     }
 
     const effectiveRedirectUri = redirectUri || FACEBOOK_REDIRECT_URI
 
-    // #region debug-point facebook-exchange-2
-    console.log('[DEBUG FB-EXCHANGE] Effective redirectUri:', effectiveRedirectUri)
-    console.log('[DEBUG FB-EXCHANGE] Facebook token URL:', `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(effectiveRedirectUri)}&code=${code?.substring(0, 20)}...`)
-    // #endregion
-
     // Step 1: Exchange authorization code for Facebook access token
     const fbTokenResponse = await fetch(
       `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&redirect_uri=${encodeURIComponent(effectiveRedirectUri)}&code=${code}`
     )
 
-    // #region debug-point facebook-exchange-3
-    console.log('[DEBUG FB-EXCHANGE] Facebook token response status:', fbTokenResponse.status)
-    // #endregion
-
     if (!fbTokenResponse.ok) {
       const errorText = await fbTokenResponse.text()
-      // #region debug-point facebook-exchange-4
-      console.error('[DEBUG FB-EXCHANGE] Facebook token exchange FAILED:', errorText)
-      // #endregion
-      return NextResponse.json({
-        success: false,
-        error: `Facebook token exchange error: ${errorText}`,
-        debug: {
-          version: CODE_VERSION,
-          appId: FACEBOOK_APP_ID,
-          secretMatchesHardcoded: FACEBOOK_APP_SECRET === CONSUMER_APP_SECRET,
-          secretLength: FACEBOOK_APP_SECRET?.length,
-          redirectUri: effectiveRedirectUri,
-        }
-      }, { status: 500 })
+      console.error('Facebook token exchange failed:', errorText)
+      return NextResponse.json({ success: false, error: 'Failed to exchange Facebook authorization code' }, { status: 500 })
     }
 
     const fbTokenData = await fbTokenResponse.json()
@@ -230,8 +193,6 @@ export async function POST(request: Request) {
         }
         if (attempt === 3) {
           console.error('Failed to update profile facebook_id after 3 attempts:', profileUpdateError)
-          // Non-fatal: login can still proceed, but future logins may not match by facebook_id
-          // The auth user_metadata still has facebook_id as a backup
         } else {
           await new Promise(resolve => setTimeout(resolve, 200 * attempt))
         }
@@ -291,8 +252,6 @@ export async function POST(request: Request) {
         }
         if (attempt === 3) {
           console.error('Failed to create profile after 3 attempts:', profileError)
-          // Non-fatal: DB trigger should have created a minimal profile.
-          // The auth user_metadata has facebook_id as a backup for future logins.
         } else {
           await new Promise(resolve => setTimeout(resolve, 200 * attempt))
         }
@@ -306,7 +265,7 @@ export async function POST(request: Request) {
     }
 
     // Step 4: Sign in with the temporary password
-    // CRITICAL: This is the last step. Retry up to 3 times with increasing delays
+    // CRITICAL: Retry up to 3 times with increasing delays
     // because Supabase's auth cluster may take time to propagate password updates.
     const supabase = await createClient()
     if (!supabase) {
@@ -334,10 +293,6 @@ export async function POST(request: Request) {
 
       signInError = result.error
       console.error(`Sign-in attempt ${attempt} failed:`, signInError.message)
-
-      // If the error is "Invalid credentials", the password update may not have
-      // propagated yet. Wait and retry. If it's a different error (e.g., user
-      // not found), retrying won't help but we still try as a last resort.
     }
 
     if (!signedIn) {
