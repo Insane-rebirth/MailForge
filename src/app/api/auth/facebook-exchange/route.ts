@@ -9,17 +9,21 @@ const OLD_BUSINESS_APP_ID = '838193829244049'
 const CONSUMER_APP_ID = '1330758902461953'
 const CONSUMER_APP_SECRET = 'cbc1fda097bbe930144df7284923d028'
 
-// Determine which App ID to use — override if env var is set to old Business app
+// Determine which App ID to use
+// Priority: env var > hardcoded fallback
+// If env var is empty or points to old Business app, force Consumer app
 const envAppId = process.env.FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID
 const FACEBOOK_APP_ID = (!envAppId || envAppId === OLD_BUSINESS_APP_ID) ? CONSUMER_APP_ID : envAppId
 
 // CRITICAL: App Secret MUST match the App ID.
-// If we override to Consumer App ID, we MUST also use Consumer App Secret.
-// A mismatched App ID + Secret causes Facebook token exchange to fail with
-// "Error validating client secret" — even though the code is perfectly valid.
+// If using Consumer App ID, we MUST use Consumer App Secret.
+// If using env var App ID, use env var secret (or fallback to hardcoded).
+// This prevents "Error validating client secret" failures when env vars are misconfigured.
+const envSecret = process.env.FACEBOOK_APP_SECRET
 const FACEBOOK_APP_SECRET = (FACEBOOK_APP_ID === CONSUMER_APP_ID)
   ? CONSUMER_APP_SECRET
-  : (process.env.FACEBOOK_APP_SECRET || CONSUMER_APP_SECRET)
+  : (envSecret || CONSUMER_APP_SECRET)
+
 const FACEBOOK_REDIRECT_URI = (process.env.NEXT_PUBLIC_APP_URL || 'https://getmailforge.top') + '/auth/callback'
 
 function generatePassword() {
